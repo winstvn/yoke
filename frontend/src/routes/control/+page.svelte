@@ -6,6 +6,8 @@
 	import PlaybackBar from '$lib/components/PlaybackBar.svelte';
 	import SearchTab from '$lib/components/SearchTab.svelte';
 	import QueueTab from '$lib/components/QueueTab.svelte';
+	import SettingsTab from '$lib/components/SettingsTab.svelte';
+	import MessageInput from '$lib/components/MessageInput.svelte';
 	import { getSocket, initSession, settings } from '$lib/stores/session';
 	import type { Singer } from '$lib/types';
 
@@ -81,10 +83,11 @@
 		{:else if activeTab === 'Queue'}
 			<QueueTab {singerId} {isHost} />
 		{:else if activeTab === 'Settings'}
-			<p class="placeholder">Settings tab coming soon...</p>
+			<SettingsTab />
 		{/if}
 	</main>
 
+	<MessageInput />
 	<PlaybackBar />
 {/if}
 
@@ -101,10 +104,4 @@
 		padding-bottom: 10rem;
 	}
 
-	.placeholder {
-		color: #666;
-		text-align: center;
-		margin-top: 3rem;
-		font-size: 1rem;
-	}
 </style>
