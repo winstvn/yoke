@@ -4,6 +4,7 @@
 	import NameEntry from '$lib/components/NameEntry.svelte';
 	import TopBar from '$lib/components/TopBar.svelte';
 	import PlaybackBar from '$lib/components/PlaybackBar.svelte';
+	import SearchTab from '$lib/components/SearchTab.svelte';
 	import { getSocket, initSession, settings } from '$lib/stores/session';
 	import type { Singer } from '$lib/types';
 
@@ -75,7 +76,7 @@
 
 	<main class="content">
 		{#if activeTab === 'Search'}
-			<p class="placeholder">Search tab coming soon...</p>
+			<SearchTab />
 		{:else if activeTab === 'Queue'}
 			<p class="placeholder">Queue tab coming soon...</p>
 		{:else if activeTab === 'Settings'}
