@@ -15,10 +15,11 @@ class ConnectionManager:
     def __init__(self) -> None:
         self.active_connections: list[WebSocket] = []
 
-    def connect(self, ws: WebSocket, singer_id: str) -> None:
+    def connect(self, ws: WebSocket, singer_id: str | None = None) -> None:
         """Register a WebSocket connection and associate it with a singer ID."""
         ws.singer_id = singer_id  # type: ignore[attr-defined]
-        self.active_connections.append(ws)
+        if ws not in self.active_connections:
+            self.active_connections.append(ws)
 
     def disconnect(self, ws: WebSocket) -> None:
         """Remove a WebSocket connection if present."""

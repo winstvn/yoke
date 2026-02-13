@@ -68,8 +68,7 @@ export function initSession(sock: YokeSocket): void {
 				break;
 
 			case 'song_queued':
-				queue.update((q) => [...q, msg.item]);
-				addNotification(`${msg.singer.name} queued "${msg.item.song.title}"`);
+				addNotification(`${msg.item.singer.name} queued "${msg.item.song.title}"`);
 				break;
 
 			case 'queue_updated':
@@ -92,6 +91,10 @@ export function initSession(sock: YokeSocket): void {
 
 			case 'search_results':
 				searchResults.set(msg.songs);
+				break;
+
+			case 'settings_updated':
+				settings.set(msg.settings);
 				break;
 
 			case 'show_qr':

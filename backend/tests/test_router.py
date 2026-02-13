@@ -104,7 +104,7 @@ async def test_handle_playback(setup):
     # Should have broadcast the playback update
     ws.send_json.assert_awaited()
     sent_messages = [call[0][0] for call in ws.send_json.call_args_list]
-    playback_msg = [m for m in sent_messages if m.get("type") == "playback_update"]
+    playback_msg = [m for m in sent_messages if m.get("type") == "playback_updated"]
     assert len(playback_msg) > 0
     assert playback_msg[0]["playback"]["status"] == "playing"
 

@@ -42,15 +42,18 @@ export interface SessionState {
 export type ServerMessage =
 	| ({ type: 'state' } & SessionState)
 	| { type: 'singer_joined'; singer: Singer }
-	| { type: 'song_queued'; item: QueueItem; singer: Singer }
+	| { type: 'song_queued'; item: QueueItem }
 	| { type: 'queue_updated'; queue: QueueItem[] }
 	| { type: 'playback_updated'; playback: PlaybackState }
-	| { type: 'download_progress'; video_id: string; percent: number }
+	| { type: 'download_progress'; video_id: string; item_id: string; progress: number }
 	| { type: 'search_results'; songs: Song[] }
 	| { type: 'show_qr' }
 	| { type: 'screen_message'; name: string; text: string }
 	| { type: 'now_playing'; item: QueueItem }
 	| { type: 'up_next'; singer: Singer; song: Song }
+	| { type: 'settings_updated'; settings: SessionSettings }
+	| { type: 'download_error'; video_id: string; item_id: string }
+	| { type: 'position_update'; position: number }
 	| { type: 'error'; message: string };
 
 // Client -> Server message types

@@ -6,6 +6,7 @@ export class YokeSocket {
 	private ws: WebSocket | null = null;
 	private handlers: MessageHandler[] = [];
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	private pendingMessages: ClientMessage[] = [];
 	private url: string;
 
 	constructor(url?: string) {
@@ -15,6 +16,13 @@ export class YokeSocket {
 
 	connect(): void {
 		this.ws = new WebSocket(this.url);
+
+		this.ws.onopen = () => {
+			for (const msg of this.pendingMessages) {
+				this.ws!.send(JSON.stringify(msg));
+			}
+			this.pendingMessages = [];
+		};
 
 		this.ws.onmessage = (event: MessageEvent) => {
 			try {
@@ -52,6 +60,8 @@ export class YokeSocket {
 	send(message: ClientMessage): void {
 		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
 			this.ws.send(JSON.stringify(message));
+		} else {
+			this.pendingMessages.push(message);
 		}
 	}
 

@@ -46,7 +46,7 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/videos/{video_id}")
+@app.get("/videos/{video_id}", response_model=None)
 async def serve_video(video_id: str) -> FileResponse | JSONResponse:
     downloader: VideoDownloader | None = getattr(app.state, "downloader", None)
     if downloader is None:
@@ -66,6 +66,20 @@ async def serve_video(video_id: str) -> FileResponse | JSONResponse:
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
+    connections.connect(websocket, singer_id=None)
+
+    # Send full state to every new connection (needed for display page)
+    if router:
+        state = await router.session.store.get_full_state()
+        await connections.send_to(websocket, {
+            "type": "state",
+            "singers": [s.model_dump() for s in state.singers],
+            "queue": [item.model_dump() for item in state.queue],
+            "current": state.current.model_dump() if state.current else None,
+            "playback": state.playback.model_dump(),
+            "settings": state.settings.model_dump(),
+        })
+
     try:
         while True:
             data = await websocket.receive_json()
@@ -80,9 +94,20 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
 # Serve frontend static files in production
 import os
+from pathlib import Path
 
 static_dir = os.environ.get("STATIC_DIR", "")
 if static_dir and os.path.isdir(static_dir):
-    from fastapi.staticfiles import StaticFiles
+    from starlette.staticfiles import StaticFiles
 
-    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+    _static_path = Path(static_dir)
+    _index_html = _static_path / "index.html"
+
+    app.mount("/_app", StaticFiles(directory=str(_static_path / "_app")), name="app-assets")
+
+    @app.get("/{path:path}", response_model=None)
+    async def spa_fallback(path: str) -> FileResponse:
+        file_path = _static_path / path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(_index_html)

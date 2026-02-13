@@ -103,11 +103,12 @@ class MessageRouter:
                 duration_seconds=r.duration_seconds,
                 cached=cached,
             )
+            await self.session.store.save_song(song)
             songs.append(song.model_dump())
 
         await self.connections.send_to(ws, {
             "type": "search_results",
-            "results": songs,
+            "songs": songs,
         })
 
     async def _handle_queue_song(
@@ -218,14 +219,14 @@ class MessageRouter:
 
             await self.connections.broadcast({
                 "type": "now_playing",
-                "current": current.model_dump() if current else None,
+                "item": current.model_dump() if current else None,
             })
             await self.connections.broadcast({
                 "type": "queue_updated",
                 "queue": [qi.model_dump() for qi in queue],
             })
             await self.connections.broadcast({
-                "type": "playback_update",
+                "type": "playback_updated",
                 "playback": playback.model_dump(),
             })
             return
@@ -237,7 +238,7 @@ class MessageRouter:
 
         await self.session.store.save_playback(playback)
         await self.connections.broadcast({
-            "type": "playback_update",
+            "type": "playback_updated",
             "playback": playback.model_dump(),
         })
 
@@ -250,7 +251,7 @@ class MessageRouter:
         await self.session.store.save_playback(playback)
 
         await self.connections.broadcast({
-            "type": "playback_update",
+            "type": "playback_updated",
             "playback": playback.model_dump(),
         })
 
@@ -266,7 +267,7 @@ class MessageRouter:
         await self.session.store.save_playback(playback)
 
         await self.connections.broadcast({
-            "type": "playback_update",
+            "type": "playback_updated",
             "playback": playback.model_dump(),
         })
 
