@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${KARAOKE_PORT:-8000}:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - KARAOKE_VIDEO_DIR=/app/data/videos
+      - KARAOKE_MAX_CONCURRENT_DOWNLOADS=${KARAOKE_MAX_CONCURRENT_DOWNLOADS:-2}
+    volumes:
+      - video-data:/app/data/videos
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+
+volumes:
+  video-data:
+  redis-data:

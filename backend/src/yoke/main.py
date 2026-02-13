@@ -76,3 +76,13 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         connections.disconnect(websocket)
         if singer_id and router:
             await router.session.disconnect(singer_id)
+
+
+# Serve frontend static files in production
+import os
+
+static_dir = os.environ.get("STATIC_DIR", "")
+if static_dir and os.path.isdir(static_dir):
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
