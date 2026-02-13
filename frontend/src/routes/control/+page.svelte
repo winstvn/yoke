@@ -1,1 +1,108 @@
-<h1>Yoke — Control</h1>
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
+	import NameEntry from '$lib/components/NameEntry.svelte';
+	import TopBar from '$lib/components/TopBar.svelte';
+	import PlaybackBar from '$lib/components/PlaybackBar.svelte';
+	import { getSocket, initSession, settings } from '$lib/stores/session';
+	import type { Singer } from '$lib/types';
+
+	const STORAGE_KEY = 'yoke_singer_name';
+
+	let joined = $state(false);
+	let singerName = $state('');
+	let singerId = $state('');
+	let activeTab = $state('Search');
+
+	let settingsValue = $state(get(settings));
+
+	$effect(() => {
+		const unsubSettings = settings.subscribe((val) => {
+			settingsValue = val;
+		});
+		return () => {
+			unsubSettings();
+		};
+	});
+
+	let isHost = $derived(singerId !== '' && settingsValue.host_id === singerId);
+
+	function handleJoin(name: string) {
+		singerName = name;
+		localStorage.setItem(STORAGE_KEY, name);
+
+		const socket = getSocket();
+		socket.connect();
+		initSession(socket);
+
+		// Listen for state message to get our singer ID
+		socket.onMessage((msg) => {
+			if (msg.type === 'state') {
+				const me = msg.singers.find((s: Singer) => s.name === singerName);
+				if (me) {
+					singerId = me.id;
+				}
+			}
+			if (msg.type === 'singer_joined' && msg.singer.name === singerName) {
+				singerId = msg.singer.id;
+			}
+		});
+
+		socket.send({ type: 'join', name });
+		joined = true;
+	}
+
+	function handleTabChange(tab: string) {
+		activeTab = tab;
+	}
+
+	onMount(() => {
+		const savedName = localStorage.getItem(STORAGE_KEY);
+		if (savedName) {
+			handleJoin(savedName);
+		}
+	});
+</script>
+
+<svelte:head>
+	<title>Yoke</title>
+</svelte:head>
+
+{#if !joined}
+	<NameEntry onJoin={handleJoin} />
+{:else}
+	<TopBar {singerName} {activeTab} {isHost} onTabChange={handleTabChange} />
+
+	<main class="content">
+		{#if activeTab === 'Search'}
+			<p class="placeholder">Search tab coming soon...</p>
+		{:else if activeTab === 'Queue'}
+			<p class="placeholder">Queue tab coming soon...</p>
+		{:else if activeTab === 'Settings'}
+			<p class="placeholder">Settings tab coming soon...</p>
+		{/if}
+	</main>
+
+	<PlaybackBar />
+{/if}
+
+<style>
+	:global(body) {
+		margin: 0;
+		background: #0f0f23;
+		color: white;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	}
+
+	.content {
+		padding: 1rem;
+		padding-bottom: 10rem;
+	}
+
+	.placeholder {
+		color: #666;
+		text-align: center;
+		margin-top: 3rem;
+		font-size: 1rem;
+	}
+</style>
