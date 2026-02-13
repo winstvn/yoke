@@ -5,6 +5,7 @@
 	import TopBar from '$lib/components/TopBar.svelte';
 	import PlaybackBar from '$lib/components/PlaybackBar.svelte';
 	import SearchTab from '$lib/components/SearchTab.svelte';
+	import QueueTab from '$lib/components/QueueTab.svelte';
 	import { getSocket, initSession, settings } from '$lib/stores/session';
 	import type { Singer } from '$lib/types';
 
@@ -78,7 +79,7 @@
 		{#if activeTab === 'Search'}
 			<SearchTab />
 		{:else if activeTab === 'Queue'}
-			<p class="placeholder">Queue tab coming soon...</p>
+			<QueueTab {singerId} {isHost} />
 		{:else if activeTab === 'Settings'}
 			<p class="placeholder">Settings tab coming soon...</p>
 		{/if}
