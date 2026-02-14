@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
 	import Notifications from '$lib/components/Notifications.svelte';
@@ -8,6 +7,7 @@
 	import IdleScreen from '$lib/components/IdleScreen.svelte';
 	import { getSocket, initSession, currentItem } from '$lib/stores/session';
 
+	let started = $state(false);
 	let current = $state(get(currentItem));
 
 	$effect(() => {
@@ -17,28 +17,35 @@
 		return unsub;
 	});
 
-	onMount(() => {
+	function start() {
+		started = true;
 		const socket = getSocket();
 		socket.connect();
 		initSession(socket);
-		return () => socket.disconnect();
-	});
+	}
 </script>
 
 <svelte:head>
 	<title>Yoke — Display</title>
 </svelte:head>
 
-<div class="display">
-	{#if current}
-		<VideoPlayer />
-	{:else}
-		<IdleScreen />
-	{/if}
-	<Notifications />
-	<FloatingMessages />
-	<QrOverlay />
-</div>
+{#if !started}
+	<button class="start-overlay" onclick={start}>
+		<h1 class="start-title">Yoke</h1>
+		<p class="start-hint">Click anywhere to start</p>
+	</button>
+{:else}
+	<div class="display">
+		{#if current}
+			<VideoPlayer />
+		{:else}
+			<IdleScreen />
+		{/if}
+		<Notifications />
+		<FloatingMessages />
+		<QrOverlay />
+	</div>
+{/if}
 
 <style>
 	:global(body) {
@@ -48,6 +55,33 @@
 		background: black;
 		color: white;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	}
+
+	.start-overlay {
+		width: 100vw;
+		height: 100vh;
+		background: #0f0f23;
+		border: none;
+		cursor: pointer;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+	}
+
+	.start-title {
+		font-size: 5rem;
+		font-weight: 700;
+		margin: 0;
+		color: white;
+		letter-spacing: 0.05em;
+	}
+
+	.start-hint {
+		font-size: 1.3rem;
+		margin: 0;
+		color: #aaa;
 	}
 
 	.display {
