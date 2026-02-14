@@ -1,0 +1,46 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${KARAOKE_PORT:-8000}:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - KARAOKE_VIDEO_DIR=/app/data/videos
+      - KARAOKE_MAX_CONCURRENT_DOWNLOADS=${KARAOKE_MAX_CONCURRENT_DOWNLOADS:-2}
+    volumes:
+      - ./backend/src:/app/backend/src
+      - ./backend/tests:/app/backend/tests
+      - ./data/videos:/app/data/videos
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    image: node:18-alpine
+    working_dir: /app
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    command: sh -c "corepack enable && pnpm install && pnpm dev --host 0.0.0.0"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - ./data/redis:/data
+
+volumes:
+  frontend_node_modules:
