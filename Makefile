@@ -4,7 +4,7 @@ FRONTEND_PORT ?= 5173
 export KARAOKE_PORT
 export FRONTEND_PORT
 
-.PHONY: dev dev-build dev-down up build down logs test frontend backend
+.PHONY: dev dev-build dev-down up build down logs test frontend backend flush-redis
 
 # Development (hot reload)
 dev:
@@ -29,6 +29,10 @@ down:
 # Logs
 logs:
 	docker compose -f docker-compose.dev.yml logs -f
+
+# Redis
+flush-redis:
+	docker compose -f docker-compose.dev.yml exec redis redis-cli FLUSHALL
 
 # Tests
 test:

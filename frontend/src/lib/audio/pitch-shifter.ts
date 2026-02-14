@@ -22,7 +22,6 @@ export class PitchShifter {
 	}
 
 	async resume(): Promise<void> {
-		// AudioContext may be suspended until user gesture
 		if (this.ctx?.state === 'suspended') {
 			await this.ctx.resume();
 		}
