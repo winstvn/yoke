@@ -150,6 +150,8 @@ class MessageRouter:
         # Start download if not cached
         if not self.downloader.is_cached(video_id):
             asyncio.create_task(self._download_video(item.id, video_id))
+        else:
+            await self._auto_advance()
 
     async def _handle_remove_from_queue(
         self, ws: WebSocket, message: dict[str, Any]
@@ -335,8 +337,31 @@ class MessageRouter:
         })
 
     # ------------------------------------------------------------------
-    # Download helper
+    # Helpers
     # ------------------------------------------------------------------
+
+    async def _auto_advance(self) -> None:
+        """If nothing is currently playing, advance the queue."""
+        current = await self.session.store.get_current()
+        if current is not None:
+            return
+
+        item = await self.session.advance_queue()
+        queue = await self.session.store.get_queue()
+        playback = await self.session.store.get_playback()
+
+        await self.connections.broadcast({
+            "type": "now_playing",
+            "item": item.model_dump() if item else None,
+        })
+        await self.connections.broadcast({
+            "type": "queue_updated",
+            "queue": [qi.model_dump() for qi in queue],
+        })
+        await self.connections.broadcast({
+            "type": "playback_updated",
+            "playback": playback.model_dump(),
+        })
 
     async def _download_video(self, item_id: str, video_id: str) -> None:
         """Download a video, updating queue item status and broadcasting progress."""
@@ -377,6 +402,8 @@ class MessageRouter:
             if song:
                 song.cached = True
                 await self.session.store.save_song(song)
+
+            await self._auto_advance()
 
         except Exception:
             logger.exception("Failed to download video %s", video_id)
