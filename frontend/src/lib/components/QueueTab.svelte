@@ -115,7 +115,6 @@
 		const [moved] = reordered.splice(dragIndex, 1);
 		reordered.splice(dropIndex, 0, moved);
 
-		items = reordered;
 		getSocket().send({ type: 'reorder_queue', item_ids: reordered.map((item) => item.id) });
 
 		dragIndex = null;
