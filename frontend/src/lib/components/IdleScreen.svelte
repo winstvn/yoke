@@ -38,6 +38,7 @@
 	<p class="subtitle">Scan to join or visit:</p>
 	<div class="qr-wrapper" bind:this={qrContainer}></div>
 	<div class="url-box">{controlUrl}</div>
+	<p class="tip">Click anywhere to toggle fullscreen</p>
 </div>
 
 <style>
@@ -82,5 +83,11 @@
 		color: white;
 		word-break: break-all;
 		text-align: center;
+	}
+
+	.tip {
+		font-size: 0.9rem;
+		margin: 0;
+		color: #666;
 	}
 </style>
