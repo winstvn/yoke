@@ -120,6 +120,10 @@ export function initSession(sock: YokeSocket): void {
 				addNotification(`Up next: ${msg.singer.name} — "${msg.song.title}"`);
 				break;
 
+			case 'position_update':
+				playback.update((p) => ({ ...p, position_seconds: msg.position }));
+				break;
+
 			case 'error':
 				addNotification(`Error: ${msg.message}`);
 				break;
