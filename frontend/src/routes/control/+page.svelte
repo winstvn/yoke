@@ -90,21 +90,25 @@
 		{/if}
 	</main>
 
-	<MessageInput />
-	<PlaybackBar />
+	<div class="bottom-bar">
+		<MessageInput />
+		<PlaybackBar />
+	</div>
 {/if}
 
 <style>
-	:global(body) {
-		margin: 0;
-		background: #0f0f23;
-		color: white;
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-	}
-
 	.content {
 		padding: 1rem;
-		padding-bottom: 10rem;
+		padding-bottom: 14rem;
 	}
 
+	.bottom-bar {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 100;
+		display: flex;
+		flex-direction: column;
+	}
 </style>

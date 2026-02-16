@@ -43,7 +43,7 @@
 	.settings-heading {
 		font-size: 1.25rem;
 		font-weight: 600;
-		color: white;
+		color: var(--amber);
 		margin: 0;
 	}
 
@@ -53,17 +53,18 @@
 		justify-content: space-between;
 		gap: 1rem;
 		padding: 1rem;
-		border-radius: 8px;
-		border: 1px solid #333;
-		background: #1a1a2e;
+		border-radius: 4px;
+		border: 1px solid var(--border);
+		background: var(--bg-surface);
 		cursor: pointer;
 		width: 100%;
 		text-align: left;
-		color: white;
+		color: var(--text-primary);
+		font-family: var(--font-mono);
 	}
 
 	.setting-card:hover {
-		background: #2a2a4e;
+		background: var(--bg-surface-hover);
 	}
 
 	.setting-label {
@@ -76,13 +77,14 @@
 		width: 44px;
 		height: 24px;
 		border-radius: 12px;
-		background: #444;
+		background: var(--border);
 		flex-shrink: 0;
-		transition: background 0.2s;
+		transition: background 0.2s, box-shadow 0.2s;
 	}
 
 	.toggle.active {
-		background: #5555ff;
+		background: var(--amber);
+		box-shadow: 0 0 10px var(--amber-glow);
 	}
 
 	.toggle-knob {
@@ -92,7 +94,7 @@
 		width: 20px;
 		height: 20px;
 		border-radius: 50%;
-		background: white;
+		background: var(--bg-deep);
 		transition: transform 0.2s;
 	}
 

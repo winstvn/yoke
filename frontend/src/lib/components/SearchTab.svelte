@@ -128,41 +128,46 @@
 	.search-input {
 		flex: 1;
 		padding: 0.75rem 1rem;
-		border-radius: 8px;
-		border: 1px solid #333;
-		background: #1a1a2e;
-		color: white;
+		border-radius: 4px;
+		border: 1px solid var(--border);
+		background: var(--bg-surface);
+		color: var(--text-primary);
 		font-size: 1rem;
+		font-family: var(--font-mono);
 		outline: none;
+		caret-color: var(--amber);
 	}
 
 	.search-input::placeholder {
-		color: #666;
+		color: var(--text-dim);
 	}
 
 	.search-input:focus {
-		border-color: #5555ff;
+		border-color: var(--border-bright);
+		box-shadow: 0 0 8px var(--amber-glow);
 	}
 
 	.search-btn {
 		padding: 0.75rem 1.25rem;
-		border-radius: 8px;
-		border: 1px solid #5555ff;
-		background: #5555ff;
-		color: white;
+		border-radius: 4px;
+		border: 1px solid var(--amber);
+		background: var(--amber);
+		color: var(--bg-deep);
 		font-size: 1rem;
 		font-weight: 600;
+		font-family: var(--font-mono);
 		cursor: pointer;
 		white-space: nowrap;
 	}
 
 	.search-btn:disabled {
-		opacity: 0.5;
+		opacity: 0.4;
 		cursor: not-allowed;
 	}
 
 	.search-btn:not(:disabled):hover {
-		background: #4444dd;
+		background: var(--amber-bright);
+		box-shadow: 0 0 12px var(--amber-glow);
 	}
 
 	.results {
@@ -177,23 +182,26 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.5rem;
-		border-radius: 8px;
-		border: 1px solid #333;
-		background: #1a1a2e;
+		border-radius: 4px;
+		border: 1px solid var(--border);
+		background: var(--bg-surface);
 		cursor: pointer;
 		text-align: left;
-		color: white;
+		color: var(--text-primary);
+		font-family: var(--font-mono);
 		width: 100%;
 	}
 
 	.song-card:hover {
-		background: #2a2a4e;
+		background: var(--bg-surface-hover);
+		border-color: var(--amber);
 	}
 
 	.thumbnail {
 		border-radius: 4px;
 		object-fit: cover;
 		flex-shrink: 0;
+		filter: sepia(0.3) brightness(0.9);
 	}
 
 	.song-info {
@@ -210,6 +218,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		color: var(--text-primary);
 	}
 
 	.song-meta {
@@ -219,7 +228,7 @@
 	}
 
 	.duration {
-		color: #888;
+		color: var(--text-secondary);
 		font-size: 0.8rem;
 	}
 

@@ -180,7 +180,7 @@
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: #888;
+		color: var(--text-secondary);
 	}
 
 	.now-playing-card {
@@ -189,9 +189,10 @@
 		justify-content: space-between;
 		gap: 0.75rem;
 		padding: 0.75rem 1rem;
-		border-radius: 8px;
-		border: 1px solid #5555ff;
-		background: #1a1a40;
+		border-radius: 4px;
+		border: 1px solid var(--border-bright);
+		background: var(--bg-surface);
+		box-shadow: 0 0 12px var(--amber-glow);
 	}
 
 	/* Queue list */
@@ -207,20 +208,21 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.6rem 0.75rem;
-		border-radius: 8px;
-		border: 1px solid #333;
-		background: #1a1a2e;
-		transition: background 0.15s;
+		border-radius: 4px;
+		border: 1px solid var(--border);
+		background: var(--bg-surface);
+		transition: background 0.15s, border-color 0.15s;
 	}
 
 	.queue-card.is-playing {
-		border-color: #5555ff;
-		background: #1a1a40;
+		border-color: var(--border-bright);
+		background: var(--bg-surface);
+		box-shadow: 0 0 10px var(--amber-glow);
 	}
 
 	.queue-card.drag-over {
-		border-color: #5555ff;
-		background: #22224e;
+		border-color: var(--amber-bright);
+		background: var(--bg-surface-hover);
 	}
 
 	.queue-card.dragging {
@@ -230,7 +232,7 @@
 	/* Drag handle */
 	.drag-handle {
 		cursor: grab;
-		color: #555;
+		color: var(--amber-dim);
 		font-size: 1rem;
 		user-select: none;
 		flex-shrink: 0;
@@ -256,11 +258,12 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		color: var(--text-primary);
 	}
 
 	.singer-name {
 		font-size: 0.8rem;
-		color: #888;
+		color: var(--text-secondary);
 	}
 
 	/* Actions */
@@ -278,10 +281,10 @@
 		justify-content: center;
 		width: 1.75rem;
 		height: 1.75rem;
-		border-radius: 6px;
-		border: 1px solid #444;
+		border-radius: 4px;
+		border: 1px solid var(--border);
 		background: transparent;
-		color: #888;
+		color: var(--text-secondary);
 		font-size: 1.1rem;
 		cursor: pointer;
 		line-height: 1;
@@ -289,14 +292,14 @@
 	}
 
 	.remove-btn:hover {
-		background: #ff4444;
-		border-color: #ff4444;
+		background: var(--danger);
+		border-color: var(--danger);
 		color: #fff;
 	}
 
 	/* Empty state */
 	.empty-state {
-		color: #666;
+		color: var(--text-dim);
 		text-align: center;
 		margin-top: 3rem;
 		font-size: 1rem;

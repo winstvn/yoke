@@ -60,24 +60,51 @@
 			? `Pitch: +${playbackState.pitch_shift}`
 			: `Pitch: ${playbackState.pitch_shift}`
 	);
+
+	let titleOuter: HTMLDivElement;
+	let titleInner: HTMLSpanElement;
+	let overflowPx = $state(0);
+
+	function measureOverflow() {
+		if (!titleOuter || !titleInner) {
+			overflowPx = 0;
+			return;
+		}
+		const diff = titleInner.scrollWidth - titleOuter.clientWidth;
+		overflowPx = diff > 0 ? diff : 0;
+	}
+
+	$effect(() => {
+		// Re-measure whenever the current song changes
+		void current;
+		// tick so DOM has updated
+		requestAnimationFrame(measureOverflow);
+	});
 </script>
 
 <div class="playback-bar">
 	{#if current}
 		<div class="now-playing">
-			<span class="song-title">{current.song.title}</span>
+			<div class="song-title" bind:this={titleOuter}>
+				<span
+					class="song-title-inner"
+					class:scrolling={overflowPx > 0}
+					style={overflowPx > 0 ? `--overflow: ${overflowPx}px; --duration: ${Math.max(overflowPx / 30, 3)}s` : ''}
+					bind:this={titleInner}
+				>{current.song.title}</span>
+			</div>
 			<span class="singer-name">{current.singer.name}</span>
 		</div>
 	{/if}
 
 	<div class="controls">
 		{#if playbackState.status === 'playing'}
-			<button class="ctrl-btn" onclick={() => sendPlayback('pause')} title="Pause">&#10074;&#10074;</button>
+			<button class="ctrl-btn" onclick={() => sendPlayback('pause')} title="Pause"><span class="material-icons">pause</span></button>
 		{:else}
-			<button class="ctrl-btn" onclick={() => sendPlayback('play')} title="Play">&#9654;</button>
+			<button class="ctrl-btn" onclick={() => sendPlayback('play')} title="Play"><span class="material-icons">play_arrow</span></button>
 		{/if}
-<button class="ctrl-btn" onclick={() => sendPlayback('skip')} title="Skip">&#9197;</button>
-		<button class="ctrl-btn" onclick={() => sendPlayback('restart')} title="Restart">&#8634;</button>
+		<button class="ctrl-btn" onclick={() => sendPlayback('skip')} title="Skip"><span class="material-icons">skip_next</span></button>
+		<button class="ctrl-btn" onclick={() => sendPlayback('restart')} title="Restart"><span class="material-icons">replay</span></button>
 	</div>
 
 	{#if current}
@@ -108,13 +135,8 @@
 
 <style>
 	.playback-bar {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		z-index: 100;
-		background: #1a1a2e;
-		border-top: 1px solid #333;
+		background: var(--bg-surface);
+		border-top: 1px solid var(--border);
 		padding: 0.75rem 1rem;
 		display: flex;
 		flex-direction: column;
@@ -129,17 +151,34 @@
 	}
 
 	.song-title {
-		color: white;
+		color: var(--text-primary);
 		font-size: 0.9rem;
 		font-weight: 600;
 		overflow: hidden;
-		text-overflow: ellipsis;
 		white-space: nowrap;
 		flex: 1;
+		min-width: 0;
+	}
+
+	.song-title-inner {
+		display: inline-block;
+	}
+
+	.song-title-inner.scrolling {
+		animation: marquee-bounce var(--duration, 4s) ease-in-out infinite alternate;
+	}
+
+	@keyframes marquee-bounce {
+		0%, 15% {
+			transform: translateX(0);
+		}
+		85%, 100% {
+			transform: translateX(calc(-1 * var(--overflow)));
+		}
 	}
 
 	.singer-name {
-		color: #888;
+		color: var(--text-secondary);
 		font-size: 0.85rem;
 		flex-shrink: 0;
 	}
@@ -154,18 +193,22 @@
 		width: 40px;
 		height: 40px;
 		border-radius: 50%;
-		border: 1px solid #444;
+		border: 1px solid var(--border);
 		background: transparent;
-		color: white;
-		font-size: 1rem;
+		color: var(--amber);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 	}
 
+	.ctrl-btn :global(.material-icons) {
+		font-size: 22px;
+	}
+
 	.ctrl-btn:hover {
-		background: #2a2a4e;
+		border-color: var(--amber);
+		box-shadow: 0 0 8px var(--amber-glow);
 	}
 
 	.seek-row {
@@ -175,7 +218,7 @@
 	}
 
 	.time {
-		color: #888;
+		color: var(--text-secondary);
 		font-size: 0.75rem;
 		min-width: 3rem;
 		text-align: center;
@@ -183,7 +226,7 @@
 
 	.seek-bar {
 		flex: 1;
-		accent-color: #5555ff;
+		accent-color: var(--amber);
 		height: 4px;
 	}
 
@@ -198,9 +241,9 @@
 		width: 30px;
 		height: 30px;
 		border-radius: 50%;
-		border: 1px solid #444;
+		border: 1px solid var(--border);
 		background: transparent;
-		color: white;
+		color: var(--amber);
 		font-size: 1rem;
 		cursor: pointer;
 		display: flex;
@@ -209,11 +252,12 @@
 	}
 
 	.pitch-btn:hover {
-		background: #2a2a4e;
+		border-color: var(--amber);
+		box-shadow: 0 0 8px var(--amber-glow);
 	}
 
 	.pitch-display {
-		color: #ccc;
+		color: var(--amber);
 		font-size: 0.85rem;
 		min-width: 5rem;
 		text-align: center;
@@ -222,14 +266,16 @@
 	.pitch-reset {
 		padding: 0.25rem 0.5rem;
 		border-radius: 4px;
-		border: 1px solid #444;
+		border: 1px solid var(--border);
 		background: transparent;
-		color: #aaa;
+		color: var(--text-secondary);
 		font-size: 0.75rem;
+		font-family: var(--font-mono);
 		cursor: pointer;
 	}
 
 	.pitch-reset:hover {
-		background: #2a2a4e;
+		border-color: var(--amber);
+		box-shadow: 0 0 6px var(--amber-glow);
 	}
 </style>

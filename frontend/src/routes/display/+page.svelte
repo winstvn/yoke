@@ -59,18 +59,13 @@
 
 <style>
 	:global(body) {
-		margin: 0;
-		padding: 0;
 		overflow: hidden;
-		background: black;
-		color: white;
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 	}
 
 	.start-overlay {
 		width: 100vw;
 		height: 100vh;
-		background: #0f0f23;
+		background: var(--bg-deep);
 		border: none;
 		cursor: pointer;
 		display: flex;
@@ -78,20 +73,26 @@
 		align-items: center;
 		justify-content: center;
 		gap: 1rem;
+		font-family: var(--font-mono);
 	}
 
 	.start-title {
 		font-size: 5rem;
 		font-weight: 700;
 		margin: 0;
-		color: white;
-		letter-spacing: 0.05em;
+		color: var(--amber);
+		letter-spacing: 0.1em;
+		text-shadow:
+			0 0 10px var(--amber-glow),
+			0 0 30px var(--amber-glow),
+			0 0 60px rgba(255, 157, 0, 0.2);
+		animation: flicker 4s infinite;
 	}
 
 	.start-hint {
 		font-size: 1.3rem;
 		margin: 0;
-		color: #aaa;
+		color: var(--text-secondary);
 	}
 
 	.display {

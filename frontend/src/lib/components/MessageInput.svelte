@@ -27,13 +27,8 @@
 
 <style>
 	.message-input-bar {
-		position: fixed;
-		bottom: 10rem;
-		left: 0;
-		right: 0;
-		z-index: 99;
 		padding: 0.5rem 1rem;
-		background: #0f0f23;
+		background: var(--bg-deep);
 	}
 
 	.message-form {
@@ -44,40 +39,45 @@
 	.message-input {
 		flex: 1;
 		padding: 0.6rem 0.75rem;
-		border-radius: 8px;
-		border: 1px solid #333;
-		background: #1a1a2e;
-		color: white;
+		border-radius: 4px;
+		border: 1px solid var(--border);
+		background: var(--bg-surface);
+		color: var(--text-primary);
 		font-size: 0.9rem;
+		font-family: var(--font-mono);
 		outline: none;
+		caret-color: var(--amber);
 	}
 
 	.message-input::placeholder {
-		color: #666;
+		color: var(--text-dim);
 	}
 
 	.message-input:focus {
-		border-color: #5555ff;
+		border-color: var(--border-bright);
+		box-shadow: 0 0 8px var(--amber-glow);
 	}
 
 	.send-btn {
 		padding: 0.6rem 1rem;
-		border-radius: 8px;
-		border: 1px solid #5555ff;
-		background: #5555ff;
-		color: white;
+		border-radius: 4px;
+		border: 1px solid var(--amber);
+		background: var(--amber);
+		color: var(--bg-deep);
 		font-size: 0.9rem;
 		font-weight: 600;
+		font-family: var(--font-mono);
 		cursor: pointer;
 		white-space: nowrap;
 	}
 
 	.send-btn:disabled {
-		opacity: 0.5;
+		opacity: 0.4;
 		cursor: not-allowed;
 	}
 
 	.send-btn:not(:disabled):hover {
-		background: #4444dd;
+		background: var(--amber-bright);
+		box-shadow: 0 0 12px var(--amber-glow);
 	}
 </style>
