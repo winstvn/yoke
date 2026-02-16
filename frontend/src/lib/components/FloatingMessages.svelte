@@ -59,10 +59,11 @@
 		position: absolute;
 		bottom: -5vh;
 		font-size: 1.5rem;
-		color: white;
+		color: var(--amber-bright);
+		font-family: var(--font-mono);
 		text-shadow:
-			2px 2px 4px rgba(0, 0, 0, 0.8),
-			-1px -1px 2px rgba(0, 0, 0, 0.6);
+			0 0 10px var(--amber-glow),
+			0 0 20px var(--amber-glow);
 		white-space: nowrap;
 		animation: floatUp 5.5s linear forwards;
 		pointer-events: none;
@@ -70,6 +71,7 @@
 
 	.msg-name {
 		font-weight: 700;
+		color: var(--amber);
 	}
 
 	@keyframes floatUp {

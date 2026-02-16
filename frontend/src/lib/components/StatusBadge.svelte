@@ -19,32 +19,35 @@
 		font-size: 0.7rem;
 		font-weight: 600;
 		padding: 0.15rem 0.5rem;
-		border-radius: 4px;
+		border-radius: 2px;
 		white-space: nowrap;
+		font-family: var(--font-mono);
 	}
 
 	.badge-downloaded {
-		background: #22c55e;
-		color: #000;
+		background: var(--amber-bright);
+		color: var(--bg-deep);
 	}
 
 	.badge-waiting {
-		background: #6b7280;
-		color: #fff;
+		background: var(--amber-dim);
+		color: var(--text-primary);
 	}
 
 	.badge-downloading {
-		background: #f59e0b;
-		color: #000;
+		background: var(--amber);
+		color: var(--bg-deep);
+		animation: glow-pulse 1.5s ease-in-out infinite;
 	}
 
 	.badge-queued {
-		background: #3b82f6;
-		color: #fff;
+		background: var(--amber);
+		color: var(--bg-deep);
 	}
 
 	.badge-playing {
-		background: #a855f7;
-		color: #fff;
+		background: var(--amber-bright);
+		color: var(--bg-deep);
+		box-shadow: 0 0 8px var(--amber-glow-strong);
 	}
 </style>

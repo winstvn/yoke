@@ -35,8 +35,8 @@
 		justify-content: center;
 		min-height: 100vh;
 		min-height: 100dvh;
-		background: #0f0f23;
-		color: white;
+		background: var(--bg-deep);
+		color: var(--text-primary);
 		padding: 1rem;
 	}
 
@@ -44,11 +44,16 @@
 		font-size: 3rem;
 		margin: 0 0 0.5rem 0;
 		font-weight: 700;
+		color: var(--amber);
+		letter-spacing: 0.1em;
+		text-shadow:
+			0 0 10px var(--amber-glow),
+			0 0 30px var(--amber-glow);
 	}
 
 	.subtitle {
 		font-size: 1.1rem;
-		color: #aaa;
+		color: var(--text-secondary);
 		margin: 0 0 2rem 0;
 	}
 
@@ -62,39 +67,44 @@
 	input {
 		flex: 1;
 		padding: 0.75rem 1rem;
-		border-radius: 8px;
-		border: 1px solid #333;
-		background: #1a1a2e;
-		color: white;
+		border-radius: 4px;
+		border: 1px solid var(--border);
+		background: var(--bg-surface);
+		color: var(--text-primary);
 		font-size: 1rem;
+		font-family: var(--font-mono);
 		outline: none;
+		caret-color: var(--amber);
 	}
 
 	input:focus {
-		border-color: #5555ff;
+		border-color: var(--border-bright);
+		box-shadow: 0 0 8px var(--amber-glow);
 	}
 
 	input::placeholder {
-		color: #666;
+		color: var(--text-dim);
 	}
 
 	button {
 		padding: 0.75rem 1.5rem;
-		border-radius: 8px;
-		border: none;
-		background: #5555ff;
-		color: white;
+		border-radius: 4px;
+		border: 1px solid var(--amber);
+		background: var(--amber);
+		color: var(--bg-deep);
 		font-size: 1rem;
 		font-weight: 600;
+		font-family: var(--font-mono);
 		cursor: pointer;
 	}
 
 	button:disabled {
-		opacity: 0.5;
+		opacity: 0.4;
 		cursor: not-allowed;
 	}
 
 	button:not(:disabled):hover {
-		background: #6666ff;
+		background: var(--amber-bright);
+		box-shadow: 0 0 12px var(--amber-glow);
 	}
 </style>

@@ -50,7 +50,7 @@
 		position: sticky;
 		top: 0;
 		z-index: 100;
-		background: #1a1a2e;
+		background: var(--bg-surface);
 	}
 
 	.header-row {
@@ -63,7 +63,8 @@
 	.app-name {
 		font-size: 1.25rem;
 		font-weight: 700;
-		color: white;
+		color: var(--amber);
+		text-shadow: 0 0 8px var(--amber-glow);
 	}
 
 	.header-right {
@@ -73,27 +74,29 @@
 	}
 
 	.singer-name {
-		color: #888;
+		color: var(--text-secondary);
 		font-size: 0.9rem;
 	}
 
 	.qr-button {
 		padding: 0.4rem 0.75rem;
-		border-radius: 6px;
-		border: 1px solid #444;
+		border-radius: 4px;
+		border: 1px solid var(--border);
 		background: transparent;
-		color: white;
+		color: var(--amber);
 		font-size: 0.85rem;
+		font-family: var(--font-mono);
 		cursor: pointer;
 	}
 
 	.qr-button:hover {
-		background: #2a2a4e;
+		border-color: var(--amber);
+		box-shadow: 0 0 8px var(--amber-glow);
 	}
 
 	.tab-row {
 		display: flex;
-		border-bottom: 1px solid #333;
+		border-bottom: 1px solid var(--border);
 	}
 
 	.tab {
@@ -102,18 +105,20 @@
 		border: none;
 		border-bottom: 2px solid transparent;
 		background: transparent;
-		color: #888;
+		color: var(--text-dim);
 		font-size: 0.95rem;
+		font-family: var(--font-mono);
 		cursor: pointer;
 		transition: color 0.15s, border-color 0.15s;
 	}
 
 	.tab:hover {
-		color: #ccc;
+		color: var(--text-secondary);
 	}
 
 	.tab.active {
-		color: white;
-		border-bottom-color: #5555ff;
+		color: var(--amber);
+		border-bottom-color: var(--amber);
+		text-shadow: 0 0 6px var(--amber-glow);
 	}
 </style>

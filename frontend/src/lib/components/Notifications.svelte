@@ -33,11 +33,13 @@
 	}
 
 	.notification {
-		background: rgba(20, 20, 40, 0.85);
-		color: white;
+		background: rgba(20, 18, 8, 0.92);
+		color: var(--amber-bright);
 		padding: 0.75rem 1.25rem;
 		font-size: 1.2rem;
-		border-radius: 8px 0 0 8px;
+		border-radius: 4px 0 0 4px;
+		border-left: 3px solid var(--amber);
+		box-shadow: 0 0 10px var(--amber-glow);
 		animation: slideIn 0.3s ease-out forwards, slideOut 0.4s ease-in 3.5s forwards;
 		pointer-events: auto;
 		max-width: 400px;

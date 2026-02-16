@@ -1,0 +1,92 @@
+@import '@fontsource-variable/geist-mono';
+
+:root {
+	--font-mono: 'Geist Mono Variable', 'SF Mono', 'Fira Code', 'Courier New', monospace;
+
+	--bg-deep: #0a0a08;
+	--bg-surface: #141410;
+	--bg-surface-hover: #1e1e16;
+
+	--amber: #ff9d00;
+	--amber-bright: #ffb833;
+	--amber-dim: #7a6530;
+	--amber-glow: rgba(255, 157, 0, 0.4);
+	--amber-glow-strong: rgba(255, 157, 0, 0.6);
+
+	--text-primary: #ffb833;
+	--text-secondary: #a08540;
+	--text-dim: #665525;
+
+	--border: #332b15;
+	--border-bright: #ff9d00;
+
+	--danger: #ff4040;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--bg-deep);
+	color: var(--text-primary);
+	font-family: var(--font-mono);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+	width: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--amber-dim);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--amber);
+}
+
+/* Utility classes */
+.glow-text {
+	text-shadow:
+		0 0 7px var(--amber-glow),
+		0 0 14px var(--amber-glow);
+}
+
+.glow-box {
+	box-shadow: 0 0 10px var(--amber-glow);
+}
+
+/* Keyframes */
+@keyframes flicker {
+	0%, 100% { opacity: 1; }
+	92% { opacity: 1; }
+	93% { opacity: 0.85; }
+	94% { opacity: 1; }
+	96% { opacity: 0.9; }
+	97% { opacity: 1; }
+}
+
+@keyframes blink-cursor {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0; }
+}
+
+@keyframes scanline-scroll {
+	0% { transform: translateY(0); }
+	100% { transform: translateY(4px); }
+}
+
+@keyframes glow-pulse {
+	0%, 100% { box-shadow: 0 0 4px var(--amber-glow); }
+	50% { box-shadow: 0 0 12px var(--amber-glow-strong); }
+}

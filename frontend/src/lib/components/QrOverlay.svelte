@@ -30,7 +30,7 @@
 			type: 'svg',
 			data: controlUrl,
 			dotsOptions: {
-				color: '#1a1a2e',
+				color: '#ff9d00',
 				type: 'rounded'
 			},
 			cornersSquareOptions: {
@@ -68,11 +68,12 @@
 	}
 
 	.qr-card {
-		background: white;
-		color: #1a1a2e;
+		background: var(--bg-surface);
+		color: var(--text-primary);
 		padding: 1.25rem 1.5rem;
-		border-radius: 12px;
-		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+		border-radius: 4px;
+		border: 1px solid var(--amber);
+		box-shadow: 0 0 20px var(--amber-glow);
 		text-align: center;
 		max-width: 320px;
 	}
@@ -81,6 +82,7 @@
 		margin: 0 0 0.75rem;
 		font-size: 1.1rem;
 		font-weight: 600;
+		color: var(--amber-bright);
 	}
 
 	.qr-wrapper {
@@ -93,10 +95,11 @@
 	.qr-url {
 		margin: 0;
 		font-size: 0.85rem;
-		font-family: 'SF Mono', 'Fira Code', monospace;
-		background: #f0f0f5;
+		font-family: var(--font-mono);
+		background: var(--bg-deep);
+		color: var(--amber);
 		padding: 0.5rem 0.75rem;
-		border-radius: 6px;
+		border-radius: 4px;
 		word-break: break-all;
 	}
 
