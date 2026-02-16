@@ -50,7 +50,7 @@ def _parse_results(data: dict | None) -> list[YoutubeResult]:
 
 
 async def search_youtube(
-    query: str, max_results: int = 10
+    query: str, max_results: int = 15
 ) -> list[YoutubeResult]:
     """Search YouTube and return parsed results.
 
