@@ -23,6 +23,14 @@
 		socket.connect();
 		initSession(socket);
 	}
+
+	function toggleFullscreen() {
+		if (document.fullscreenElement) {
+			document.exitFullscreen();
+		} else {
+			document.documentElement.requestFullscreen();
+		}
+	}
 </script>
 
 <svelte:head>
@@ -35,7 +43,9 @@
 		<p class="start-hint">Click anywhere to start</p>
 	</button>
 {:else}
-	<div class="display">
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="display" onclick={toggleFullscreen}>
 		{#if current}
 			<VideoPlayer />
 		{:else}
