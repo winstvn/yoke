@@ -76,8 +76,7 @@
 		{:else}
 			<button class="ctrl-btn" onclick={() => sendPlayback('play')} title="Play">&#9654;</button>
 		{/if}
-		<button class="ctrl-btn" onclick={() => sendPlayback('stop')} title="Stop">&#9632;</button>
-		<button class="ctrl-btn" onclick={() => sendPlayback('skip')} title="Skip">&#9197;</button>
+<button class="ctrl-btn" onclick={() => sendPlayback('skip')} title="Skip">&#9197;</button>
 		<button class="ctrl-btn" onclick={() => sendPlayback('restart')} title="Restart">&#8634;</button>
 	</div>
 
