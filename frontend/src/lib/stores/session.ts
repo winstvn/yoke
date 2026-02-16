@@ -21,6 +21,7 @@ export const settings = writable<SessionSettings>({
 	host_id: null,
 	anyone_can_reorder: false
 });
+export const searchQuery = writable('');
 export const searchResults = writable<Song[]>([]);
 export const notifications = writable<Array<{ id: string; text: string }>>([]);
 export const screenMessages = writable<Array<{ id: string; name: string; text: string }>>([]);

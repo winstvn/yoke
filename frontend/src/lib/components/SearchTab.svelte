@@ -1,13 +1,21 @@
 <script lang="ts">
-	import { searchResults, queue, getSocket } from '$lib/stores/session';
+	import { searchResults, searchQuery, queue, currentItem, getSocket } from '$lib/stores/session';
 	import { get } from 'svelte/store';
 	import type { Song, QueueItem } from '$lib/types';
+	import StatusBadge from './StatusBadge.svelte';
 
-	let query = $state('');
+	let query = $state(get(searchQuery));
 	let searching = $state(false);
 	let results = $state<Song[]>(get(searchResults));
 	let queueItems = $state<QueueItem[]>(get(queue));
-	let queuedIds = $derived(new Set(queueItems.map((item) => item.song.video_id)));
+	let current = $state<QueueItem | null>(get(currentItem));
+	let queuedStatus = $derived(() => {
+		const map = new Map(queueItems.map((item) => [item.song.video_id, item.status]));
+		if (current) {
+			map.set(current.song.video_id, 'playing');
+		}
+		return map;
+	});
 
 	$effect(() => {
 		const unsub = searchResults.subscribe((val) => {
@@ -26,6 +34,19 @@
 		return () => {
 			unsub();
 		};
+	});
+
+	$effect(() => {
+		const unsub = currentItem.subscribe((val) => {
+			current = val;
+		});
+		return () => {
+			unsub();
+		};
+	});
+
+	$effect(() => {
+		searchQuery.set(query);
 	});
 
 	function handleSearch(e: Event) {
@@ -60,8 +81,8 @@
 
 	<div class="results">
 		{#each results as song (song.video_id)}
-			{@const isQueued = queuedIds.has(song.video_id)}
-			<button class="song-card" class:song-card-queued={isQueued} onclick={() => queueSong(song.video_id)}>
+			{@const status = queuedStatus().get(song.video_id)}
+			<button class="song-card" class:song-card-queued={!!status} onclick={() => queueSong(song.video_id)}>
 				<img
 					class="thumbnail"
 					src={song.thumbnail_url}
@@ -73,10 +94,17 @@
 					<span class="song-title">{song.title}</span>
 					<div class="song-meta">
 						<span class="duration">{formatDuration(song.duration_seconds)}</span>
-						{#if isQueued}
-							<span class="badge-queued">Queued</span>
-						{:else if song.cached}
-							<span class="badge-ready">Ready</span>
+						{#if song.cached || status === 'ready' || status === 'playing' || status === 'done'}
+							<StatusBadge variant="downloaded" />
+						{/if}
+						{#if status === 'waiting'}
+							<StatusBadge variant="waiting" />
+						{:else if status === 'downloading'}
+							<StatusBadge variant="downloading" />
+						{:else if status === 'ready'}
+							<StatusBadge variant="queued" />
+						{:else if status === 'playing'}
+							<StatusBadge variant="playing" />
 						{/if}
 					</div>
 				</div>
@@ -193,24 +221,6 @@
 	.duration {
 		color: #888;
 		font-size: 0.8rem;
-	}
-
-	.badge-ready {
-		font-size: 0.7rem;
-		font-weight: 600;
-		padding: 0.1rem 0.4rem;
-		border-radius: 4px;
-		background: #22c55e;
-		color: #000;
-	}
-
-	.badge-queued {
-		font-size: 0.7rem;
-		font-weight: 600;
-		padding: 0.1rem 0.4rem;
-		border-radius: 4px;
-		background: #3b82f6;
-		color: #fff;
 	}
 
 	.song-card-queued {

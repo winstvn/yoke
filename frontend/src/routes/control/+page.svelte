@@ -12,11 +12,19 @@
 
 
 	const STORAGE_KEY = 'yoke_singer_name';
+	const TAB_KEY = 'yoke_active_tab';
+	const VALID_TABS = ['Search', 'Queue', 'Settings'];
 
 	let joined = $state(false);
 	let singerName = $state('');
 	let singerId = $state('');
-	let activeTab = $state('Search');
+	let activeTab = $state(restoreTab());
+
+	function restoreTab(): string {
+		if (typeof sessionStorage === 'undefined') return 'Search';
+		const saved = sessionStorage.getItem(TAB_KEY);
+		return saved && VALID_TABS.includes(saved) ? saved : 'Search';
+	}
 
 	let settingsValue = $state(get(settings));
 
@@ -52,6 +60,7 @@
 
 	function handleTabChange(tab: string) {
 		activeTab = tab;
+		sessionStorage.setItem(TAB_KEY, tab);
 	}
 
 	onMount(() => {

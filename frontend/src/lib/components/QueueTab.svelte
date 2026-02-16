@@ -2,6 +2,7 @@
 	import { queue, currentItem, settings, getSocket } from '$lib/stores/session';
 	import { get } from 'svelte/store';
 	import type { QueueItem, SessionSettings } from '$lib/types';
+	import StatusBadge from './StatusBadge.svelte';
 
 	let { singerId, isHost }: { singerId: string; isHost: boolean } = $props();
 
@@ -41,37 +42,13 @@
 	let dragIndex = $state<number | null>(null);
 	let dragOverIndex = $state<number | null>(null);
 
-	function statusLabel(status: QueueItem['status']): string {
-		switch (status) {
-			case 'waiting':
-				return 'Waiting';
-			case 'downloading':
-				return 'Downloading...';
-			case 'ready':
-				return 'Ready';
-			case 'playing':
-				return 'Playing';
-			case 'done':
-				return 'Done';
-			default:
-				return status;
-		}
-	}
-
-	function statusClass(status: QueueItem['status']): string {
-		switch (status) {
-			case 'waiting':
-				return 'badge-waiting';
-			case 'downloading':
-				return 'badge-downloading';
-			case 'ready':
-				return 'badge-ready';
-			case 'playing':
-				return 'badge-playing';
-			default:
-				return 'badge-waiting';
-		}
-	}
+	const statusVariant: Record<QueueItem['status'], 'waiting' | 'downloading' | 'queued' | 'playing' | 'downloaded'> = {
+		waiting: 'waiting',
+		downloading: 'downloading',
+		ready: 'queued',
+		playing: 'playing',
+		done: 'downloaded'
+	};
 
 	function canRemove(item: QueueItem): boolean {
 		return isHost || item.singer.id === singerId;
@@ -136,7 +113,7 @@
 					<span class="song-title">{current.song.title}</span>
 					<span class="singer-name">{current.singer.name}</span>
 				</div>
-				<span class="badge badge-playing">Playing</span>
+				<StatusBadge variant="playing" />
 			</div>
 		</div>
 	{/if}
@@ -167,7 +144,7 @@
 						<span class="singer-name">{item.singer.name}</span>
 					</div>
 					<div class="card-actions">
-						<span class="badge {statusClass(item.status)}">{statusLabel(item.status)}</span>
+						<StatusBadge variant={statusVariant[item.status]} />
 						{#if canRemove(item)}
 							<button
 								class="remove-btn"
@@ -292,35 +269,6 @@
 		align-items: center;
 		gap: 0.5rem;
 		flex-shrink: 0;
-	}
-
-	/* Status badges */
-	.badge {
-		font-size: 0.7rem;
-		font-weight: 600;
-		padding: 0.15rem 0.5rem;
-		border-radius: 4px;
-		white-space: nowrap;
-	}
-
-	.badge-waiting {
-		background: #444;
-		color: #ccc;
-	}
-
-	.badge-downloading {
-		background: #a855f7;
-		color: #fff;
-	}
-
-	.badge-ready {
-		background: #22c55e;
-		color: #000;
-	}
-
-	.badge-playing {
-		background: #5555ff;
-		color: #fff;
 	}
 
 	/* Remove button */
