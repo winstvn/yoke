@@ -6,7 +6,11 @@ const backendWs = backendUrl.replace(/^http/, 'ws');
 
 export default defineConfig({
 	plugins: [sveltekit()],
+	ssr: {
+		noExternal: ['qr-code-styling']
+	},
 	server: {
+		host: true,
 		proxy: {
 			'/api': backendUrl,
 			'/ws': {

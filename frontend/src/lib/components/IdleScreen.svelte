@@ -1,18 +1,42 @@
 <script lang="ts">
+	import QRCodeStyling from 'qr-code-styling';
+	import { resolveControlUrl } from '$lib/control-url';
+
 	let controlUrl = $state('');
+	let qrContainer: HTMLDivElement;
 
 	$effect(() => {
-		if (typeof window !== 'undefined') {
-			const { protocol, hostname, port } = window.location;
-			const portPart = port ? `:${port}` : '';
-			controlUrl = `${protocol}//${hostname}${portPart}/control`;
-		}
+		resolveControlUrl().then((url) => {
+			controlUrl = url;
+			const qr = new QRCodeStyling({
+				width: 200,
+				height: 200,
+				type: 'svg',
+				data: url,
+				dotsOptions: {
+					color: '#ffffff',
+					type: 'rounded'
+				},
+				cornersSquareOptions: {
+					type: 'extra-rounded'
+				},
+				cornersDotOptions: {
+					type: 'dot'
+				},
+				backgroundOptions: {
+					color: 'transparent'
+				}
+			});
+			qrContainer.innerHTML = '';
+			qr.append(qrContainer);
+		});
 	});
 </script>
 
 <div class="idle-screen">
 	<h1 class="title">Yoke</h1>
 	<p class="subtitle">Scan to join or visit:</p>
+	<div class="qr-wrapper" bind:this={qrContainer}></div>
 	<div class="url-box">{controlUrl}</div>
 </div>
 
@@ -40,6 +64,12 @@
 		font-size: 1.3rem;
 		margin: 0;
 		color: #aaa;
+	}
+
+	.qr-wrapper {
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.url-box {

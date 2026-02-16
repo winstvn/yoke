@@ -1,5 +1,7 @@
 <script lang="ts">
+	import QRCodeStyling from 'qr-code-styling';
 	import { showQr } from '$lib/stores/session';
+	import { resolveControlUrl } from '$lib/control-url';
 	import { get } from 'svelte/store';
 
 	let visible = $state(get(showQr));
@@ -12,13 +14,37 @@
 	});
 
 	let controlUrl = $state('');
+	let qrContainer = $state<HTMLDivElement | null>(null);
 
 	$effect(() => {
-		if (typeof window !== 'undefined') {
-			const { protocol, hostname, port } = window.location;
-			const portPart = port ? `:${port}` : '';
-			controlUrl = `${protocol}//${hostname}${portPart}/control`;
-		}
+		resolveControlUrl().then((url) => {
+			controlUrl = url;
+		});
+	});
+
+	$effect(() => {
+		if (!controlUrl || !qrContainer) return;
+		const qr = new QRCodeStyling({
+			width: 160,
+			height: 160,
+			type: 'svg',
+			data: controlUrl,
+			dotsOptions: {
+				color: '#1a1a2e',
+				type: 'rounded'
+			},
+			cornersSquareOptions: {
+				type: 'extra-rounded'
+			},
+			cornersDotOptions: {
+				type: 'dot'
+			},
+			backgroundOptions: {
+				color: 'transparent'
+			}
+		});
+		qrContainer.innerHTML = '';
+		qr.append(qrContainer);
 	});
 </script>
 
@@ -26,6 +52,7 @@
 	<div class="qr-overlay">
 		<div class="qr-card">
 			<p class="qr-label">Join the session!</p>
+			<div class="qr-wrapper" bind:this={qrContainer}></div>
 			<p class="qr-url">{controlUrl}</p>
 		</div>
 	</div>
@@ -51,14 +78,21 @@
 	}
 
 	.qr-label {
-		margin: 0 0 0.5rem;
+		margin: 0 0 0.75rem;
 		font-size: 1.1rem;
 		font-weight: 600;
 	}
 
+	.qr-wrapper {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 0.5rem;
+	}
+
 	.qr-url {
 		margin: 0;
-		font-size: 0.95rem;
+		font-size: 0.85rem;
 		font-family: 'SF Mono', 'Fira Code', monospace;
 		background: #f0f0f5;
 		padding: 0.5rem 0.75rem;

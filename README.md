@@ -26,14 +26,16 @@ A web-based karaoke app for group sessions. Users join from their phones to sear
 
 ```bash
 cp .env.example .env      # adjust if needed
-docker compose up --build
+KARAOKE_EXTERNAL_IP=$(ipconfig getifaddr en0) docker compose up --build
 ```
 
-The app will be available at `http://localhost:8000`. Open `/control` on your phone and `/display` on a TV.
+The app will be available at `http://localhost:8000`. Open `/display` on a TV — it shows a QR code and URL that phones on the same network can use to join.
+
+The `KARAOKE_EXTERNAL_IP` variable tells the app your machine's LAN IP so the QR code points to the right address. On macOS, `ipconfig getifaddr en0` returns your Wi-Fi IP. On Linux, use `hostname -I | awk '{print $1}'` instead.
 
 ### Local development
 
-**Prerequisites:** Python 3.13+, Node.js 18+, pnpm, Redis, ffmpeg
+**Prerequisites:** Python 3.13+, Node.js 20+, pnpm, Redis, ffmpeg
 
 Start Redis:
 
@@ -57,7 +59,7 @@ pnpm install
 pnpm dev
 ```
 
-The Vite dev server proxies API and WebSocket requests to the backend at `localhost:8000`.
+The Vite dev server proxies API and WebSocket requests to the backend at `localhost:8000`. The dev server binds to all interfaces (`0.0.0.0`), so phones on the same network can access it directly.
 
 ### Running tests
 
@@ -77,6 +79,7 @@ Environment variables (see `.env.example`):
 | `KARAOKE_PORT` | `8000` | Server port |
 | `KARAOKE_VIDEO_DIR` | `./data/videos` | Directory for cached video files |
 | `KARAOKE_MAX_CONCURRENT_DOWNLOADS` | `2` | Max simultaneous yt-dlp downloads |
+| `KARAOKE_EXTERNAL_IP` | *(auto-detected)* | LAN IP shown in QR codes. Set this when running in Docker so phones can connect. |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection string |
 
 ## Project structure

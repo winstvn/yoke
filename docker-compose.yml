@@ -4,6 +4,7 @@ services:
     ports:
       - "${KARAOKE_PORT:-8000}:8000"
     environment:
+      - KARAOKE_EXTERNAL_IP=${KARAOKE_EXTERNAL_IP:-}
       - REDIS_URL=redis://redis:6379
       - KARAOKE_VIDEO_DIR=/app/data/videos
       - KARAOKE_MAX_CONCURRENT_DOWNLOADS=${KARAOKE_MAX_CONCURRENT_DOWNLOADS:-2}

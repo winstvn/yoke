@@ -6,6 +6,7 @@ services:
     ports:
       - "${KARAOKE_PORT:-8000}:8000"
     environment:
+      - KARAOKE_EXTERNAL_IP=${KARAOKE_EXTERNAL_IP:-}
       - REDIS_URL=redis://redis:6379
       - KARAOKE_VIDEO_DIR=/app/data/videos
       - KARAOKE_MAX_CONCURRENT_DOWNLOADS=${KARAOKE_MAX_CONCURRENT_DOWNLOADS:-2}
@@ -23,7 +24,7 @@ services:
       start_period: 10s
 
   frontend:
-    image: node:18-alpine
+    image: node:20-alpine
     working_dir: /app
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
