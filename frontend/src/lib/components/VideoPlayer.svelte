@@ -94,7 +94,7 @@
 	// Handle seek: if server position differs from video by >2 seconds, seek
 	$effect(() => {
 		const serverPosition = playbackState.position_seconds;
-		if (!videoEl || videoEl.paused) return;
+		if (!videoEl) return;
 		const diff = Math.abs(videoEl.currentTime - serverPosition);
 		if (diff > 2) {
 			videoEl.currentTime = serverPosition;

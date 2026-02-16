@@ -62,10 +62,11 @@ class MessageRouter:
         ws.singer_id = singer.id  # type: ignore[attr-defined]
         self.connections.connect(ws, singer.id)
 
-        # Send the full state to the new client
+        # Send the full state to the new client, including their own singer ID
         state = await self.session.store.get_full_state()
         await self.connections.send_to(ws, {
             "type": "state",
+            "singer_id": singer.id,
             "singers": [s.model_dump() for s in state.singers],
             "queue": [item.model_dump() for item in state.queue],
             "current": state.current.model_dump() if state.current else None,
@@ -135,6 +136,10 @@ class MessageRouter:
             )
 
         item = await self.session.queue_song(singer_id, song)
+
+        # Mark as ready immediately if already cached
+        if self.downloader.is_cached(video_id):
+            await self.session.store.update_queue_item(item.id, status="ready")
 
         # Broadcast queue update
         queue = await self.session.store.get_queue()
@@ -247,7 +252,7 @@ class MessageRouter:
     async def _handle_seek(
         self, ws: WebSocket, message: dict[str, Any]
     ) -> None:
-        position = message.get("position", 0.0)
+        position = message.get("position_seconds", message.get("position", 0.0))
         playback = await self.session.store.get_playback()
         playback.position_seconds = float(position)
         await self.session.store.save_playback(playback)
@@ -276,7 +281,12 @@ class MessageRouter:
     async def _handle_position_update(
         self, ws: WebSocket, message: dict[str, Any]
     ) -> None:
-        position = message.get("position", 0.0)
+        position = message.get("position_seconds", message.get("position", 0.0))
+
+        # Persist so other actions (pause, etc.) reflect the real position
+        playback = await self.session.store.get_playback()
+        playback.position_seconds = float(position)
+        await self.session.store.save_playback(playback)
 
         # Relay to other clients (from display page to control pages)
         await self.connections.broadcast(

@@ -9,7 +9,7 @@
 	import SettingsTab from '$lib/components/SettingsTab.svelte';
 	import MessageInput from '$lib/components/MessageInput.svelte';
 	import { getSocket, initSession, settings } from '$lib/stores/session';
-	import type { Singer } from '$lib/types';
+
 
 	const STORAGE_KEY = 'yoke_singer_name';
 
@@ -41,14 +41,8 @@
 
 		// Listen for state message to get our singer ID
 		socket.onMessage((msg) => {
-			if (msg.type === 'state') {
-				const me = msg.singers.find((s: Singer) => s.name === singerName);
-				if (me) {
-					singerId = me.id;
-				}
-			}
-			if (msg.type === 'singer_joined' && msg.singer.name === singerName) {
-				singerId = msg.singer.id;
+			if (msg.type === 'state' && msg.singer_id) {
+				singerId = msg.singer_id;
 			}
 		});
 
