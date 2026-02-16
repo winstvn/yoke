@@ -1,12 +1,40 @@
 from __future__ import annotations
 
 import logging
+import os
+import socket
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
 import redis.asyncio as aioredis
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
+
+
+def _get_local_ip() -> str:
+    """Return the LAN IP address of the host machine."""
+    # Explicit override (works everywhere)
+    env_ip = os.environ.get("KARAOKE_EXTERNAL_IP")
+    if env_ip:
+        return env_ip
+
+    # Docker Desktop (macOS/Windows) maps this to the host
+    try:
+        ip = socket.gethostbyname("host.docker.internal")
+        if not ip.startswith("127."):
+            return ip
+    except socket.gaierror:
+        pass
+
+    # Bare-metal / Linux fallback
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "localhost"
 
 
 class _HealthFilter(logging.Filter):
@@ -53,6 +81,11 @@ app = FastAPI(title="Yoke", version="0.1.0", lifespan=lifespan)
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/server-info")
+async def server_info() -> dict[str, str]:
+    return {"ip": _get_local_ip(), "port": str(config.port)}
 
 
 @app.get("/videos/{video_id}", response_model=None)
