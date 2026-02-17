@@ -18,6 +18,7 @@ class Song(BaseModel):
     thumbnail_url: str
     duration_seconds: int
     cached: bool = False
+    detected_key: str | None = None
 
 
 class QueueItem(BaseModel):

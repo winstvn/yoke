@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
+from yoke.key_analyzer import detect_key
 from yoke.models import Song
 from yoke.youtube import search_youtube
 
@@ -265,7 +266,7 @@ class MessageRouter:
     async def _handle_pitch(
         self, ws: WebSocket, message: dict[str, Any]
     ) -> None:
-        value = message.get("value", 0)
+        value = message.get("semitones", 0)
         # Clamp to -6..+6
         value = max(-6, min(6, int(value)))
 
@@ -407,10 +408,12 @@ class MessageRouter:
                 "queue": [qi.model_dump() for qi in queue],
             })
 
-            # Save song as cached
+            # Save song as cached and detect key
             song = await self.session.store.get_song(video_id)
             if song:
                 song.cached = True
+                video_path = self.downloader.video_path(video_id)
+                song.detected_key = await detect_key(video_path)
                 await self.session.store.save_song(song)
 
             await self._auto_advance()

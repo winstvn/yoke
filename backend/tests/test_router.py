@@ -188,7 +188,7 @@ async def test_handle_pitch(setup):
     await router.handle(ws, {"type": "join", "name": "Alice"})
     ws.send_json.reset_mock()
 
-    await router.handle(ws, {"type": "pitch", "value": 3})
+    await router.handle(ws, {"type": "pitch", "semitones": 3})
 
     playback = await store.get_playback()
     assert playback.pitch_shift == 3
@@ -205,13 +205,13 @@ async def test_handle_pitch_clamped(setup):
     ws.send_json.reset_mock()
 
     # Try to set pitch beyond limit
-    await router.handle(ws, {"type": "pitch", "value": 10})
+    await router.handle(ws, {"type": "pitch", "semitones": 10})
 
     playback = await store.get_playback()
     assert playback.pitch_shift == 6  # clamped to max
 
     # Try negative beyond limit
-    await router.handle(ws, {"type": "pitch", "value": -10})
+    await router.handle(ws, {"type": "pitch", "semitones": -10})
 
     playback = await store.get_playback()
     assert playback.pitch_shift == -6  # clamped to min
