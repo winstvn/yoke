@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from functools import partial
 
 import yt_dlp
 
@@ -49,28 +48,24 @@ def _parse_results(data: dict | None) -> list[YoutubeResult]:
     return results
 
 
-async def search_youtube(
-    query: str, max_results: int = 15
-) -> list[YoutubeResult]:
+async def search_youtube(query: str, max_results: int = 15) -> list[YoutubeResult]:
     """Search YouTube and return parsed results.
 
     Runs yt-dlp's extract_info in a thread executor since it performs
     blocking network I/O.
     """
-    opts = {
+    opts: yt_dlp._Params = {
         "quiet": True,
         "no_warnings": True,
         "extract_flat": True,
-        "skip_download": True,
+        "skip_download": "True",
     }
 
     loop = asyncio.get_running_loop()
 
     def _extract() -> dict | None:
         with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(
-                f"ytsearch{max_results}:{query}", download=False
-            )
+            return ydl.extract_info(f"ytsearch{max_results}:{query}", download=False)
 
     data = await loop.run_in_executor(None, _extract)
     return _parse_results(data)

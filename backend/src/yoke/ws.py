@@ -40,9 +40,13 @@ class ConnectionManager:
         try:
             await ws.send_json(message)
         except Exception:
-            logger.exception("Failed to send message to %s", getattr(ws, "singer_id", "unknown"))
+            logger.exception(
+                "Failed to send message to %s", getattr(ws, "singer_id", "unknown")
+            )
 
-    async def broadcast(self, message: dict[str, Any], exclude: WebSocket | None = None) -> None:
+    async def broadcast(
+        self, message: dict[str, Any], exclude: WebSocket | None = None
+    ) -> None:
         """Send a JSON message to all connected clients, optionally excluding one."""
         for ws in self.active_connections:
             if ws is exclude:
