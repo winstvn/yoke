@@ -59,7 +59,7 @@ export type ServerMessage =
 
 // Client -> Server message types
 export type ClientMessage =
-	| { type: 'join'; name: string }
+	| { type: 'join'; name: string; singer_id?: string }
 	| { type: 'search'; query: string }
 	| { type: 'queue_song'; video_id: string }
 	| { type: 'remove_from_queue'; item_id: string }

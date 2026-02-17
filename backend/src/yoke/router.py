@@ -57,7 +57,8 @@ class MessageRouter:
         self, ws: WebSocket, message: dict[str, Any]
     ) -> None:
         name = message.get("name", "Anonymous")
-        singer = await self.session.join(name)
+        singer_id = message.get("singer_id")
+        singer = await self.session.join(name, singer_id=singer_id)
 
         # Associate this websocket with the singer
         ws.singer_id = singer.id  # type: ignore[attr-defined]

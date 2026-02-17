@@ -12,6 +12,7 @@
 
 
 	const STORAGE_KEY = 'yoke_singer_name';
+	const STORAGE_ID_KEY = 'yoke_singer_id';
 	const TAB_KEY = 'yoke_active_tab';
 	const VALID_TABS = ['Search', 'Queue', 'Settings'];
 
@@ -51,10 +52,12 @@
 		socket.onMessage((msg) => {
 			if (msg.type === 'state' && msg.singer_id) {
 				singerId = msg.singer_id;
+				localStorage.setItem(STORAGE_ID_KEY, msg.singer_id);
 			}
 		});
 
-		socket.send({ type: 'join', name });
+		const savedId = localStorage.getItem(STORAGE_ID_KEY) ?? undefined;
+		socket.send({ type: 'join', name, singer_id: savedId });
 		joined = true;
 	}
 

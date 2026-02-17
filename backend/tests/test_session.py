@@ -181,6 +181,32 @@ async def test_skip_advances_queue(session: SessionManager):
     assert stored_current is None
 
 
+async def test_rejoin_with_singer_id_preserves_host(session: SessionManager):
+    host = await session.join("Alice")
+    original_id = host.id
+
+    # Simulate disconnect
+    await session.disconnect(original_id)
+    singer = await session.store.get_singer(original_id)
+    assert singer is not None
+    assert singer.connected is False
+
+    # Rejoin with the same singer_id
+    reclaimed = await session.join("Alice", singer_id=original_id)
+    assert reclaimed.id == original_id
+    assert reclaimed.connected is True
+
+    # Host should still be the same
+    settings = await session.store.get_settings()
+    assert settings.host_id == original_id
+
+
+async def test_rejoin_with_invalid_singer_id_creates_new(session: SessionManager):
+    singer = await session.join("Alice", singer_id="nonexistent-id")
+    assert singer.id != "nonexistent-id"
+    assert singer.name == "Alice"
+
+
 async def test_update_setting_host_only(session: SessionManager):
     host = await session.join("Alice")
     guest = await session.join("Bob")

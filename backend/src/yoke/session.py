@@ -8,11 +8,23 @@ class SessionManager:
     def __init__(self, store: RedisStore) -> None:
         self.store = store
 
-    async def join(self, name: str) -> Singer:
-        """Create a singer and save to store.
+    async def join(self, name: str, singer_id: str | None = None) -> Singer:
+        """Create or reclaim a singer and save to store.
+
+        If *singer_id* is provided and matches an existing singer, reclaim
+        that identity (mark connected, update name).  Otherwise create a
+        new singer.
 
         If this is the first singer (host_id is None), set them as host.
         """
+        if singer_id:
+            existing = await self.store.get_singer(singer_id)
+            if existing is not None:
+                existing.connected = True
+                existing.name = name
+                await self.store.save_singer(existing)
+                return existing
+
         singer = Singer(name=name)
         await self.store.save_singer(singer)
 
