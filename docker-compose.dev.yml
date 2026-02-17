@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "${KARAOKE_PORT:-8000}:8000"
+    env_file:
+      - .env
     environment:
       - KARAOKE_EXTERNAL_IP=${KARAOKE_EXTERNAL_IP:-}
       - REDIS_URL=redis://redis:6379
@@ -18,10 +20,10 @@ services:
       - redis
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 5s
+      interval: 2s
       timeout: 3s
       retries: 5
-      start_period: 10s
+      start_period: 2s
 
   frontend:
     image: node:20-alpine
@@ -39,7 +41,7 @@ services:
         condition: service_healthy
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.6-alpine
     volumes:
       - ./data/redis:/data
 

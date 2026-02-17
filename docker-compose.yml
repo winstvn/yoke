@@ -3,6 +3,8 @@ services:
     build: .
     ports:
       - "${KARAOKE_PORT:-8000}:8000"
+    env_file:
+      - .env
     environment:
       - KARAOKE_EXTERNAL_IP=${KARAOKE_EXTERNAL_IP:-}
       - REDIS_URL=redis://redis:6379
@@ -14,6 +16,6 @@ services:
       - redis
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.6-alpine
     volumes:
       - ./data/redis:/data
