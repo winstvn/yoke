@@ -16,6 +16,7 @@
 	<h1 class="heading">Yoke</h1>
 	<p class="subtitle">Enter your name to join</p>
 	<form onsubmit={handleSubmit}>
+		<!-- svelte-ignore a11y_autofocus -->
 		<input
 			type="text"
 			bind:value={name}

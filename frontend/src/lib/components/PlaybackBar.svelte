@@ -78,8 +78,8 @@
 			: null
 	);
 
-	let titleOuter: HTMLDivElement;
-	let titleInner: HTMLSpanElement;
+	let titleOuter = $state<HTMLDivElement>();
+	let titleInner = $state<HTMLSpanElement>();
 	let overflowPx = $state(0);
 
 	function measureOverflow() {
