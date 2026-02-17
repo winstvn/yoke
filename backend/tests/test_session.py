@@ -1,7 +1,7 @@
 import fakeredis.aioredis
 import pytest
 
-from yoke.models import PlaybackState, QueueItem, Song
+from yoke.models import QueueItem, Song
 from yoke.redis_store import RedisStore
 from yoke.session import SessionManager
 

@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
-from yoke.models import PlaybackState, Song
+from yoke.models import Song
 from yoke.youtube import search_youtube
 
 if TYPE_CHECKING:

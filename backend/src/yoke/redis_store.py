@@ -72,9 +72,7 @@ class RedisStore:
         await self._r.delete(f"{PREFIX}:queue")
         for item_id in item_ids:
             if item_id in by_id:
-                await self._r.rpush(
-                    f"{PREFIX}:queue", by_id[item_id].model_dump_json()
-                )
+                await self._r.rpush(f"{PREFIX}:queue", by_id[item_id].model_dump_json())
 
     async def update_queue_item(self, item_id: str, **fields: object) -> None:
         queue = await self.get_queue()

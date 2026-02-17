@@ -1,6 +1,6 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-from yoke.youtube import YoutubeResult, _parse_results, search_youtube
+from yoke.youtube import _parse_results, search_youtube
 
 
 def _make_entry(video_id: str, title: str, duration: int) -> dict:
