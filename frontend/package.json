@@ -27,6 +27,7 @@
 	},
 	"dependencies": {
 		"@fontsource-variable/geist-mono": "^5.2.7",
-		"qr-code-styling": "^1.9.2"
+		"qr-code-styling": "^1.9.2",
+		"soundtouchjs": "^0.3.0"
 	}
 }

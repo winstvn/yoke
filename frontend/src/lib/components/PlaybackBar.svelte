@@ -55,10 +55,27 @@
 		return `${m}:${s.toString().padStart(2, '0')}`;
 	}
 
+	const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+	function transposeKey(key: string, semitones: number): string {
+		const minor = key.endsWith('m');
+		const root = minor ? key.slice(0, -1) : key;
+		const idx = KEY_NAMES.indexOf(root);
+		if (idx === -1) return key;
+		const newIdx = ((idx + semitones) % 12 + 12) % 12;
+		return KEY_NAMES[newIdx] + (minor ? 'm' : '');
+	}
+
 	let pitchDisplay = $derived(
 		playbackState.pitch_shift > 0
 			? `Pitch: +${playbackState.pitch_shift}`
 			: `Pitch: ${playbackState.pitch_shift}`
+	);
+
+	let displayKey = $derived(
+		current?.song.detected_key
+			? transposeKey(current.song.detected_key, playbackState.pitch_shift)
+			: null
 	);
 
 	let titleOuter: HTMLDivElement;
@@ -124,12 +141,21 @@
 	{/if}
 
 	<div class="pitch-row">
-		<button class="pitch-btn" onclick={() => handlePitch(-1)}>-</button>
-		<span class="pitch-display">{pitchDisplay}</span>
-		<button class="pitch-btn" onclick={() => handlePitch(1)}>+</button>
-		{#if playbackState.pitch_shift !== 0}
-			<button class="pitch-reset" onclick={resetPitch}>Reset</button>
-		{/if}
+		<div class="pitch-side pitch-left">
+			{#if displayKey}
+				<span class="detected-key">Key: {displayKey}</span>
+			{/if}
+		</div>
+		<div class="pitch-center">
+			<button class="pitch-btn" onclick={() => handlePitch(-1)}>-</button>
+			<span class="pitch-display">{pitchDisplay}</span>
+			<button class="pitch-btn" onclick={() => handlePitch(1)}>+</button>
+		</div>
+		<div class="pitch-side pitch-right">
+			{#if playbackState.pitch_shift !== 0}
+				<button class="pitch-reset" onclick={resetPitch}>Reset</button>
+			{/if}
+		</div>
 	</div>
 </div>
 
@@ -233,8 +259,28 @@
 	.pitch-row {
 		display: flex;
 		align-items: center;
-		justify-content: center;
+	}
+
+	.pitch-side {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.pitch-left {
+		display: flex;
+		justify-content: flex-end;
+		margin-right: 0.5rem;
+	}
+
+	.pitch-right {
+		margin-left: 0.5rem;
+	}
+
+	.pitch-center {
+		display: flex;
+		align-items: center;
 		gap: 0.5rem;
+		flex-shrink: 0;
 	}
 
 	.pitch-btn {
@@ -277,5 +323,14 @@
 	.pitch-reset:hover {
 		border-color: var(--amber);
 		box-shadow: 0 0 6px var(--amber-glow);
+	}
+
+	.detected-key {
+		color: var(--text-secondary);
+		font-size: 0.8rem;
+		padding: 0.15rem 0.4rem;
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		white-space: nowrap;
 	}
 </style>

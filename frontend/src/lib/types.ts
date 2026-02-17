@@ -10,6 +10,7 @@ export interface Song {
 	thumbnail_url: string;
 	duration_seconds: number;
 	cached: boolean;
+	detected_key: string | null;
 }
 
 export interface QueueItem {

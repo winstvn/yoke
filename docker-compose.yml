@@ -1,6 +1,9 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        PUBLIC_PITCH_BUFFER_SIZE: ${PUBLIC_PITCH_BUFFER_SIZE:-4096}
     ports:
       - "${KARAOKE_PORT:-8000}:8000"
     env_file:

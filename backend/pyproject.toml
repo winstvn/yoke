@@ -14,6 +14,7 @@ dependencies = [
     "yt-dlp~=2026.2.4",
     "pydantic~=2.12.5",
     "websockets~=16.0",
+    "librosa~=0.11.0",
 ]
 
 [dependency-groups]
@@ -27,6 +28,11 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:audioread",
+    "ignore::FutureWarning:librosa",
+    "ignore::UserWarning:librosa",
+]
 
 [tool.ty]
 python-version = "3.13"
