@@ -28,6 +28,11 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:audioread",
+    "ignore::FutureWarning:librosa",
+    "ignore::UserWarning:librosa",
+]
 
 [tool.ty]
 python-version = "3.13"

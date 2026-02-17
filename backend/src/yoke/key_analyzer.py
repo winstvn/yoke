@@ -2,10 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import warnings
 from pathlib import Path
 
-import librosa
 import numpy as np
+
+# Suppress noisy warnings from librosa and its dependencies
+warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"audioread")
+warnings.filterwarnings("ignore", category=FutureWarning, module=r"librosa")
+warnings.filterwarnings("ignore", category=UserWarning, module=r"librosa")
+
+import librosa  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +30,9 @@ _KEY_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 def _detect_key_sync(path: Path) -> str | None:
     """Detect the musical key of an audio file (blocking)."""
     try:
-        y, sr = librosa.load(str(path), sr=22050, mono=True, duration=60)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            y, sr = librosa.load(str(path), sr=22050, mono=True, duration=60)
         chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
         chroma_mean = chroma.mean(axis=1)
 
