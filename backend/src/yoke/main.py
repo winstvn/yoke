@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import os
 import socket
 from collections.abc import AsyncGenerator
@@ -44,20 +43,6 @@ def _get_local_ip() -> str:
     except Exception:
         return "localhost"
 
-
-class _HealthFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        return "GET /health" not in record.getMessage()
-
-
-logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
-
-from yoke.config import config
-from yoke.downloader import VideoDownloader
-from yoke.redis_store import RedisStore
-from yoke.router import MessageRouter
-from yoke.session import SessionManager
-from yoke.ws import ConnectionManager
 
 connections = ConnectionManager()
 router: MessageRouter | None = None
