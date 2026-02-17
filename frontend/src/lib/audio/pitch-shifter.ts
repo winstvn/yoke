@@ -1,6 +1,6 @@
 import { SoundTouch } from 'soundtouchjs';
 
-const BUFFER_SIZE = 4096;
+const BUFFER_SIZE = Number(import.meta.env.PUBLIC_PITCH_BUFFER_SIZE) || 4096;
 
 export class PitchShifter {
 	private ctx: AudioContext | null = null;

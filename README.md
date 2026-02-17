@@ -82,6 +82,7 @@ Environment variables (see `.env.example`):
 | `KARAOKE_MAX_CONCURRENT_DOWNLOADS` | `2` | Max simultaneous yt-dlp downloads |
 | `KARAOKE_EXTERNAL_IP` | *(auto-detected)* | LAN IP shown in QR codes. Set this when running in Docker so phones can connect. |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection string |
+| `PUBLIC_PITCH_BUFFER_SIZE` | `4096` | Audio buffer size for pitch shifting (256–16384). Lower = less latency, higher = more stability. |
 
 ## Project structure
 
