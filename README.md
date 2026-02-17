@@ -6,7 +6,8 @@ A web-based karaoke app for group sessions. Users join from their phones to sear
 
 - **YouTube search & queueing** -- find songs, add them to a shared queue, and auto-download videos in the background
 - **Real-time sync** -- WebSocket-driven state keeps all connected clients in lockstep
-- **Pitch shifting** -- transpose vocals up or down 6 semitones via the Web Audio API
+- **Pitch shifting** -- transpose vocals up or down 6 semitones without changing playback speed (SoundTouch DSP)
+- **Key detection** -- automatically detects the musical key of each song after download; displayed key transposes live as you shift pitch
 - **Mobile control page** -- phone-friendly UI with tabs for search, queue, and settings
 - **TV display page** -- full-screen video player with Niconico-style floating messages, notifications, and QR overlay
 - **Persistence** -- Redis-backed session state survives server restarts
@@ -16,8 +17,8 @@ A web-based karaoke app for group sessions. Users join from their phones to sear
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python 3.13, FastAPI, Redis, yt-dlp |
-| Frontend | SvelteKit 2, Svelte 5, TypeScript, Vite |
+| Backend | Python 3.13, FastAPI, Redis, yt-dlp, librosa |
+| Frontend | SvelteKit 2, Svelte 5, TypeScript, Vite, SoundTouchJS |
 | Infrastructure | Docker Compose, Redis 7 |
 
 ## Quick start
@@ -94,6 +95,7 @@ backend/
     models.py        # Pydantic data models
     youtube.py       # yt-dlp search wrapper
     downloader.py    # Video download manager
+    key_analyzer.py  # Musical key detection (librosa)
     ws.py            # WebSocket connection manager
     config.py        # Environment config
   tests/             # pytest suite
@@ -105,7 +107,7 @@ frontend/
     lib/
       ws.ts          # WebSocket client with auto-reconnect
       stores/        # Svelte reactive state
-      audio/         # Pitch shifting via Web Audio API
+      audio/         # Pitch shifting (SoundTouch via Web Audio API)
       components/    # Reusable Svelte components
 ```
 
