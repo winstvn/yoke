@@ -4,7 +4,8 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN corepack enable && corepack prepare && pnpm install --frozen-lockfile
 COPY frontend/ ./
-RUN pnpm build
+ARG PUBLIC_PITCH_BUFFER_SIZE=4096
+RUN PUBLIC_PITCH_BUFFER_SIZE=$PUBLIC_PITCH_BUFFER_SIZE pnpm build
 
 # Stage 2: Python backend
 FROM python:3.13-slim AS runtime
