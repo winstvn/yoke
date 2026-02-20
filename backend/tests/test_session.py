@@ -207,6 +207,157 @@ async def test_rejoin_with_invalid_singer_id_creates_new(session: SessionManager
     assert singer.name == "Alice"
 
 
+async def test_advance_queue_pushes_current_to_history(session: SessionManager):
+    host = await session.join("Alice")
+    item1 = await session.queue_song(host.id, _song("v1", "Song A"))
+    item2 = await session.queue_song(host.id, _song("v2", "Song B"))
+
+    # Advance to item1
+    await session.advance_queue()
+
+    # Advance to item2 — item1 should be pushed to history
+    await session.advance_queue()
+
+    history = await session.store.get_history()
+    assert len(history) == 1
+    assert history[0].song.video_id == "v1"
+    assert history[0].status == "done"
+
+
+async def test_go_previous_moves_history_to_current(session: SessionManager):
+    host = await session.join("Alice")
+    item1 = await session.queue_song(host.id, _song("v1", "Song A"))
+    item2 = await session.queue_song(host.id, _song("v2", "Song B"))
+
+    # Play A then skip to B
+    await session.advance_queue()
+    await session.advance_queue()
+
+    current = await session.store.get_current()
+    assert current is not None
+    assert current.song.video_id == "v2"
+
+    # Go previous — should go back to A, B returns to queue front
+    result = await session.go_previous()
+    assert result is not None
+    assert result.song.video_id == "v1"
+    assert result.status == "playing"
+
+    current = await session.store.get_current()
+    assert current is not None
+    assert current.song.video_id == "v1"
+
+    queue = await session.store.get_queue()
+    assert len(queue) == 1
+    assert queue[0].song.video_id == "v2"
+    assert queue[0].status == "ready"
+
+
+async def test_go_previous_returns_none_when_no_history(session: SessionManager):
+    host = await session.join("Alice")
+    item1 = await session.queue_song(host.id, _song("v1", "Song A"))
+
+    await session.advance_queue()
+
+    result = await session.go_previous()
+    assert result is None
+
+    # Current should be unchanged
+    current = await session.store.get_current()
+    assert current is not None
+    assert current.song.video_id == "v1"
+
+
+async def test_multiple_previous_preserves_order(session: SessionManager):
+    """Skip through A→B→C, then previous back C→B→A."""
+    host = await session.join("Alice")
+    await session.queue_song(host.id, _song("v1", "Song A"))
+    await session.queue_song(host.id, _song("v2", "Song B"))
+    await session.queue_song(host.id, _song("v3", "Song C"))
+
+    # Advance through all three
+    await session.advance_queue()  # now playing A
+    await session.advance_queue()  # now playing B
+    await session.advance_queue()  # now playing C
+
+    current = await session.store.get_current()
+    assert current is not None
+    assert current.song.video_id == "v3"
+
+    # Previous: C→B
+    result = await session.go_previous()
+    assert result is not None
+    assert result.song.video_id == "v2"
+
+    # Previous: B→A
+    result = await session.go_previous()
+    assert result is not None
+    assert result.song.video_id == "v1"
+
+    # No more history
+    result = await session.go_previous()
+    assert result is None
+
+
+async def test_skip_after_previous(session: SessionManager):
+    """Skip A→B→C, previous back to B, skip forward → plays C again."""
+    host = await session.join("Alice")
+    await session.queue_song(host.id, _song("v1", "Song A"))
+    await session.queue_song(host.id, _song("v2", "Song B"))
+    await session.queue_song(host.id, _song("v3", "Song C"))
+
+    await session.advance_queue()  # A
+    await session.advance_queue()  # B
+    await session.advance_queue()  # C
+
+    # Go back to B (C goes to front of queue)
+    result = await session.go_previous()
+    assert result is not None
+    assert result.song.video_id == "v2"
+
+    queue = await session.store.get_queue()
+    assert queue[0].song.video_id == "v3"
+
+    # Skip forward — should play C again
+    current = await session.advance_queue()
+    assert current is not None
+    assert current.song.video_id == "v3"
+
+
+async def test_queue_after_previous(session: SessionManager):
+    """Skip A→B, previous back to A (B to queue front), queue D, skip → B, then D."""
+    host = await session.join("Alice")
+    await session.queue_song(host.id, _song("v1", "Song A"))
+    await session.queue_song(host.id, _song("v2", "Song B"))
+
+    await session.advance_queue()  # A
+    await session.advance_queue()  # B
+
+    # Go back to A — B returns to queue front
+    result = await session.go_previous()
+    assert result is not None
+    assert result.song.video_id == "v1"
+
+    # Queue a new song D
+    await session.queue_song(host.id, _song("v4", "Song D"))
+
+    # Queue should be: B (front), D
+    queue = await session.store.get_queue()
+    assert len(queue) == 2
+    assert queue[0].song.video_id == "v2"
+    assert queue[1].song.video_id == "v4"
+
+    # Skip forward → plays B (not D)
+    current = await session.advance_queue()
+    assert current is not None
+    assert current.song.video_id == "v2"
+
+    # Skip again → plays D
+    current = await session.advance_queue()
+    assert current is not None
+    assert current.song.video_id == "v4"
+
+
 async def test_update_setting_host_only(session: SessionManager):
     host = await session.join("Alice")
     guest = await session.join("Bob")

@@ -99,9 +99,16 @@ class SessionManager:
     async def advance_queue(self) -> QueueItem | None:
         """Pop the first item from the queue and set it as current.
 
+        Pushes the outgoing current item onto history before replacing it.
         Resets playback to PlaybackState(status="playing"). Returns the item,
         or None if the queue is empty (also clears current in that case).
         """
+        # Save outgoing current to history
+        old_current = await self.store.get_current()
+        if old_current is not None:
+            old_current.status = "done"
+            await self.store.prepend_to_history(old_current)
+
         queue = await self.store.get_queue()
         if not queue:
             await self.store.clear_current()
@@ -115,6 +122,30 @@ class SessionManager:
         await self.store.save_playback(PlaybackState(status="playing"))
 
         return item
+
+    async def go_previous(self) -> QueueItem | None:
+        """Go back to the previous song from history.
+
+        Pops the most recent item from history, pushes the current item
+        back to the front of the queue, and sets the history item as current.
+        Returns the history item, or None if history is empty.
+        """
+        prev = await self.store.pop_from_history()
+        if prev is None:
+            return None
+
+        # Push current back to front of queue
+        current = await self.store.get_current()
+        if current is not None:
+            current.status = "ready"
+            await self.store.prepend_to_queue(current)
+
+        # Set history item as current
+        prev.status = "playing"
+        await self.store.save_current(prev)
+        await self.store.save_playback(PlaybackState(status="playing"))
+
+        return prev
 
     async def update_setting(
         self, requester_id: str, key: str, value: object

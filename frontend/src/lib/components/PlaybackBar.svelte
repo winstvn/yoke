@@ -24,8 +24,16 @@
 	let displayPosition = $derived(seeking ? seekValue : playbackState.position_seconds);
 	let duration = $derived(current?.song.duration_seconds ?? 0);
 
-	function sendPlayback(action: 'play' | 'pause' | 'stop' | 'skip' | 'restart') {
+	function sendPlayback(action: 'play' | 'pause' | 'stop' | 'skip' | 'restart' | 'previous') {
 		getSocket().send({ type: 'playback', action });
+	}
+
+	function handlePrevious() {
+		if (playbackState.position_seconds > 3) {
+			sendPlayback('restart');
+		} else {
+			sendPlayback('previous');
+		}
 	}
 
 	function handleSeekInput(e: Event) {
@@ -115,13 +123,13 @@
 	{/if}
 
 	<div class="controls">
+		<button class="ctrl-btn" onclick={handlePrevious} title="Previous"><span class="material-icons">skip_previous</span></button>
 		{#if playbackState.status === 'playing'}
 			<button class="ctrl-btn" onclick={() => sendPlayback('pause')} title="Pause"><span class="material-icons">pause</span></button>
 		{:else}
 			<button class="ctrl-btn" onclick={() => sendPlayback('play')} title="Play"><span class="material-icons">play_arrow</span></button>
 		{/if}
 		<button class="ctrl-btn" onclick={() => sendPlayback('skip')} title="Skip"><span class="material-icons">skip_next</span></button>
-		<button class="ctrl-btn" onclick={() => sendPlayback('restart')} title="Restart"><span class="material-icons">replay</span></button>
 	</div>
 
 	{#if current}
