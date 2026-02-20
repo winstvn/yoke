@@ -469,3 +469,142 @@ async def test_handle_playback_previous_without_history(setup):
     assert len(playback_msgs) == 1
     assert playback_msgs[0]["playback"]["position_seconds"] == 0.0
     assert playback_msgs[0]["playback"]["status"] == "playing"
+
+
+async def test_playback_denied_for_non_singer(setup):
+    router, connections, session, store = setup
+
+    # Host joins
+    ws_host = make_mock_ws()
+    await router.handle(ws_host, {"type": "join", "name": "Alice"})
+
+    # Guest joins
+    ws_guest = make_mock_ws()
+    await router.handle(ws_guest, {"type": "join", "name": "Bob"})
+
+    # Third user joins
+    ws_other = make_mock_ws()
+    await router.handle(ws_other, {"type": "join", "name": "Charlie"})
+
+    # Guest queues a song and it becomes current
+    song = _song()
+    await session.queue_song(ws_guest.singer_id, song)
+    await session.advance_queue()
+
+    ws_other.send_json.reset_mock()
+
+    # Third user tries to pause — should be denied
+    await router.handle(ws_other, {"type": "playback", "action": "pause"})
+
+    sent = [call[0][0] for call in ws_other.send_json.call_args_list]
+    error_msgs = [m for m in sent if m.get("type") == "error"]
+    assert len(error_msgs) > 0
+    assert "current singer or host" in error_msgs[0]["message"]
+
+    # Playback should be unchanged
+    playback = await store.get_playback()
+    assert playback.status == "playing"
+
+
+async def test_playback_allowed_for_current_singer(setup):
+    router, connections, session, store = setup
+
+    # Host joins
+    ws_host = make_mock_ws()
+    await router.handle(ws_host, {"type": "join", "name": "Alice"})
+
+    # Guest joins
+    ws_guest = make_mock_ws()
+    await router.handle(ws_guest, {"type": "join", "name": "Bob"})
+
+    # Guest queues a song and it becomes current
+    song = _song()
+    await session.queue_song(ws_guest.singer_id, song)
+    await session.advance_queue()
+
+    ws_guest.send_json.reset_mock()
+
+    # Current singer pauses — should succeed
+    await router.handle(ws_guest, {"type": "playback", "action": "pause"})
+
+    playback = await store.get_playback()
+    assert playback.status == "paused"
+
+
+async def test_playback_allowed_for_host_on_others_song(setup):
+    router, connections, session, store = setup
+
+    # Host joins
+    ws_host = make_mock_ws()
+    await router.handle(ws_host, {"type": "join", "name": "Alice"})
+
+    # Guest joins and queues a song
+    ws_guest = make_mock_ws()
+    await router.handle(ws_guest, {"type": "join", "name": "Bob"})
+    song = _song()
+    await session.queue_song(ws_guest.singer_id, song)
+    await session.advance_queue()
+
+    ws_host.send_json.reset_mock()
+
+    # Host pauses guest's song — should succeed
+    await router.handle(ws_host, {"type": "playback", "action": "pause"})
+
+    playback = await store.get_playback()
+    assert playback.status == "paused"
+
+
+async def test_seek_denied_for_non_singer(setup):
+    router, connections, session, store = setup
+
+    ws_host = make_mock_ws()
+    await router.handle(ws_host, {"type": "join", "name": "Alice"})
+
+    ws_guest = make_mock_ws()
+    await router.handle(ws_guest, {"type": "join", "name": "Bob"})
+
+    ws_other = make_mock_ws()
+    await router.handle(ws_other, {"type": "join", "name": "Charlie"})
+
+    song = _song()
+    await session.queue_song(ws_guest.singer_id, song)
+    await session.advance_queue()
+
+    ws_other.send_json.reset_mock()
+
+    await router.handle(ws_other, {"type": "seek", "position_seconds": 60.0})
+
+    sent = [call[0][0] for call in ws_other.send_json.call_args_list]
+    error_msgs = [m for m in sent if m.get("type") == "error"]
+    assert len(error_msgs) > 0
+
+    playback = await store.get_playback()
+    assert playback.position_seconds == 0.0  # unchanged
+
+
+async def test_pitch_denied_for_non_singer(setup):
+    router, connections, session, store = setup
+
+    ws_host = make_mock_ws()
+    await router.handle(ws_host, {"type": "join", "name": "Alice"})
+
+    ws_guest = make_mock_ws()
+    await router.handle(ws_guest, {"type": "join", "name": "Bob"})
+
+    ws_other = make_mock_ws()
+    await router.handle(ws_other, {"type": "join", "name": "Charlie"})
+
+    song = _song()
+    await session.queue_song(ws_guest.singer_id, song)
+    await session.advance_queue()
+
+    ws_other.send_json.reset_mock()
+
+    await router.handle(ws_other, {"type": "pitch", "semitones": 3})
+
+    sent = [call[0][0] for call in ws_other.send_json.call_args_list]
+    error_msgs = [m for m in sent if m.get("type") == "error"]
+    assert len(error_msgs) > 0
+
+    playback = await store.get_playback()
+    assert playback.pitch_shift == 0  # unchanged

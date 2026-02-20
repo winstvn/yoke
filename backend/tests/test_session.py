@@ -358,6 +358,45 @@ async def test_queue_after_previous(session: SessionManager):
     assert current.song.video_id == "v4"
 
 
+async def test_can_control_playback_host_always_allowed(session: SessionManager):
+    host = await session.join("Alice")
+    guest = await session.join("Bob")
+    # Queue a song as guest and set it as current
+    item = await session.queue_song(guest.id, _song())
+    await session.advance_queue()
+
+    # Host can control even though it's guest's song
+    assert await session.can_control_playback(host.id) is True
+
+
+async def test_can_control_playback_current_singer_allowed(session: SessionManager):
+    _host = await session.join("Alice")
+    guest = await session.join("Bob")
+    item = await session.queue_song(guest.id, _song())
+    await session.advance_queue()
+
+    assert await session.can_control_playback(guest.id) is True
+
+
+async def test_can_control_playback_other_singer_denied(session: SessionManager):
+    _host = await session.join("Alice")
+    guest = await session.join("Bob")
+    other = await session.join("Charlie")
+    item = await session.queue_song(guest.id, _song())
+    await session.advance_queue()
+
+    assert await session.can_control_playback(other.id) is False
+
+
+async def test_can_control_playback_no_current_song(session: SessionManager):
+    host = await session.join("Alice")
+    guest = await session.join("Bob")
+
+    # No current song — host allowed, guest denied
+    assert await session.can_control_playback(host.id) is True
+    assert await session.can_control_playback(guest.id) is False
+
+
 async def test_update_setting_host_only(session: SessionManager):
     host = await session.join("Alice")
     guest = await session.join("Bob")
