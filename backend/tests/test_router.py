@@ -407,3 +407,65 @@ async def test_handle_position_update(setup):
     pos_msgs = [m for m in sent_ws2 if m.get("type") == "position_update"]
     assert len(pos_msgs) > 0
     assert pos_msgs[0]["position"] == 55.5
+
+
+async def test_handle_playback_previous_with_history(setup):
+    router, connections, session, store = setup
+
+    ws = make_mock_ws()
+    await router.handle(ws, {"type": "join", "name": "Alice"})
+
+    # Queue two songs and advance through them to build history
+    song_a = _song("v1", "Song A")
+    song_b = _song("v2", "Song B")
+    await session.queue_song(ws.singer_id, song_a)
+    await session.queue_song(ws.singer_id, song_b)
+    await session.advance_queue()  # play A
+    await session.advance_queue()  # play B, A goes to history
+
+    ws.send_json.reset_mock()
+
+    await router.handle(ws, {"type": "playback", "action": "previous"})
+
+    sent = [call[0][0] for call in ws.send_json.call_args_list]
+
+    now_playing_msgs = [m for m in sent if m.get("type") == "now_playing"]
+    assert len(now_playing_msgs) == 1
+    assert now_playing_msgs[0]["item"]["song"]["video_id"] == "v1"
+
+    queue_msgs = [m for m in sent if m.get("type") == "queue_updated"]
+    assert len(queue_msgs) == 1
+
+    playback_msgs = [m for m in sent if m.get("type") == "playback_updated"]
+    assert len(playback_msgs) == 1
+    assert playback_msgs[0]["playback"]["status"] == "playing"
+
+
+async def test_handle_playback_previous_without_history(setup):
+    router, connections, session, store = setup
+
+    ws = make_mock_ws()
+    await router.handle(ws, {"type": "join", "name": "Alice"})
+
+    # Queue one song and play it (no history)
+    song = _song("v1", "Song A")
+    await session.queue_song(ws.singer_id, song)
+    await session.advance_queue()
+
+    # Set some position so we can verify it resets
+    await store.save_playback(PlaybackState(status="playing", position_seconds=42.0))
+    ws.send_json.reset_mock()
+
+    await router.handle(ws, {"type": "playback", "action": "previous"})
+
+    sent = [call[0][0] for call in ws.send_json.call_args_list]
+
+    # Should NOT have now_playing (no song change)
+    now_playing_msgs = [m for m in sent if m.get("type") == "now_playing"]
+    assert len(now_playing_msgs) == 0
+
+    # Should have playback_updated with position 0
+    playback_msgs = [m for m in sent if m.get("type") == "playback_updated"]
+    assert len(playback_msgs) == 1
+    assert playback_msgs[0]["playback"]["position_seconds"] == 0.0
+    assert playback_msgs[0]["playback"]["status"] == "playing"

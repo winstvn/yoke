@@ -1,1 +1,6 @@
 backend/.venv
+frontend/node_modules
+frontend/.svelte-kit
+frontend/build
+frontend/.pnpm-store
+frontend/.playwright-cli

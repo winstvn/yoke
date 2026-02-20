@@ -64,7 +64,7 @@ export type ClientMessage =
 	| { type: 'queue_song'; video_id: string }
 	| { type: 'remove_from_queue'; item_id: string }
 	| { type: 'reorder_queue'; item_ids: string[] }
-	| { type: 'playback'; action: 'play' | 'pause' | 'stop' | 'skip' | 'restart' }
+	| { type: 'playback'; action: 'play' | 'pause' | 'stop' | 'skip' | 'restart' | 'previous' }
 	| { type: 'seek'; position_seconds: number }
 	| { type: 'pitch'; semitones: number }
 	| { type: 'update_setting'; key: string; value: unknown }

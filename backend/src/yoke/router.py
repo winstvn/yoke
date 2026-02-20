@@ -239,6 +239,33 @@ class MessageRouter:
                 "playback": playback.model_dump(),
             })
             return
+        elif action == "previous":
+            result = await self.session.go_previous()
+            if result is None:
+                # No history — restart current song
+                playback.status = "playing"
+                playback.position_seconds = 0.0
+                await self.session.store.save_playback(playback)
+                await self.connections.broadcast({
+                    "type": "playback_updated",
+                    "playback": playback.model_dump(),
+                })
+            else:
+                queue = await self.session.store.get_queue()
+                playback = await self.session.store.get_playback()
+                await self.connections.broadcast({
+                    "type": "now_playing",
+                    "item": result.model_dump(),
+                })
+                await self.connections.broadcast({
+                    "type": "queue_updated",
+                    "queue": [qi.model_dump() for qi in queue],
+                })
+                await self.connections.broadcast({
+                    "type": "playback_updated",
+                    "playback": playback.model_dump(),
+                })
+            return
         else:
             await self.connections.send_to(
                 ws, {"type": "error", "message": f"Unknown playback action: {action}"}

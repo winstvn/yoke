@@ -83,6 +83,26 @@ class RedisStore:
                     setattr(item, k, v)
             await self._r.rpush(f"{PREFIX}:queue", item.model_dump_json())
 
+    # --- History ---
+
+    async def get_history(self) -> list[QueueItem]:
+        data = await self._r.lrange(f"{PREFIX}:history", 0, -1)
+        return [QueueItem.model_validate_json(item) for item in data]
+
+    async def prepend_to_history(self, item: QueueItem) -> None:
+        await self._r.lpush(f"{PREFIX}:history", item.model_dump_json())
+
+    async def pop_from_history(self) -> QueueItem | None:
+        data = await self._r.lpop(f"{PREFIX}:history")
+        if data is None:
+            return None
+        return QueueItem.model_validate_json(data)
+
+    # --- Queue (prepend) ---
+
+    async def prepend_to_queue(self, item: QueueItem) -> None:
+        await self._r.lpush(f"{PREFIX}:queue", item.model_dump_json())
+
     # --- Current item ---
 
     async def save_current(self, item: QueueItem) -> None:
