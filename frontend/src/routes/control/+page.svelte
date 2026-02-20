@@ -8,7 +8,7 @@
 	import QueueTab from '$lib/components/QueueTab.svelte';
 	import SettingsTab from '$lib/components/SettingsTab.svelte';
 	import MessageInput from '$lib/components/MessageInput.svelte';
-	import { getSocket, initSession, settings } from '$lib/stores/session';
+	import { getSocket, initSession, settings, currentItem } from '$lib/stores/session';
 
 
 	const STORAGE_KEY = 'yoke_singer_name';
@@ -28,17 +28,23 @@
 	}
 
 	let settingsValue = $state(get(settings));
+	let current = $state(get(currentItem));
 
 	$effect(() => {
 		const unsubSettings = settings.subscribe((val) => {
 			settingsValue = val;
 		});
+		const unsubCurrent = currentItem.subscribe((val) => {
+			current = val;
+		});
 		return () => {
 			unsubSettings();
+			unsubCurrent();
 		};
 	});
 
 	let isHost = $derived(singerId !== '' && settingsValue.host_id === singerId);
+	let canControlPlayback = $derived(isHost || (current !== null && current.singer.id === singerId));
 
 	function handleJoin(name: string) {
 		singerName = name;
@@ -95,7 +101,7 @@
 
 	<div class="bottom-bar">
 		<MessageInput />
-		<PlaybackBar />
+		<PlaybackBar disabled={!canControlPlayback} />
 	</div>
 {/if}
 

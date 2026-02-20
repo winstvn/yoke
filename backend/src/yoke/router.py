@@ -209,6 +209,9 @@ class MessageRouter:
     async def _handle_playback(
         self, ws: WebSocket, message: dict[str, Any]
     ) -> None:
+        if await self._require_playback_control(ws) is None:
+            return
+
         action = message.get("action", "")
         playback = await self.session.store.get_playback()
 
@@ -281,6 +284,9 @@ class MessageRouter:
     async def _handle_seek(
         self, ws: WebSocket, message: dict[str, Any]
     ) -> None:
+        if await self._require_playback_control(ws) is None:
+            return
+
         position = message.get("position_seconds", message.get("position", 0.0))
         playback = await self.session.store.get_playback()
         playback.position_seconds = float(position)
@@ -294,6 +300,9 @@ class MessageRouter:
     async def _handle_pitch(
         self, ws: WebSocket, message: dict[str, Any]
     ) -> None:
+        if await self._require_playback_control(ws) is None:
+            return
+
         value = message.get("semitones", 0)
         # Clamp to -6..+6
         value = max(-6, min(6, int(value)))
@@ -374,6 +383,35 @@ class MessageRouter:
             "name": name,
             "text": text,
         })
+
+    # ------------------------------------------------------------------
+    # Permission helpers
+    # ------------------------------------------------------------------
+
+    async def _require_playback_control(self, ws: WebSocket) -> str | None:
+        """Check that the sender is allowed to control playback.
+
+        Returns the singer_id on success, or None after sending an error.
+        """
+        singer_id = getattr(ws, "singer_id", None)
+        if singer_id is None:
+            await self.connections.send_to(
+                ws, {"type": "error", "message": "Not joined"}
+            )
+            return None
+
+        allowed = await self.session.can_control_playback(singer_id)
+        if not allowed:
+            await self.connections.send_to(
+                ws,
+                {
+                    "type": "error",
+                    "message": "Only the current singer or host can control playback",
+                },
+            )
+            return None
+
+        return singer_id
 
     # ------------------------------------------------------------------
     # Helpers

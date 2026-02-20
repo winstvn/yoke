@@ -147,6 +147,23 @@ class SessionManager:
 
         return prev
 
+    async def can_control_playback(self, requester_id: str) -> bool:
+        """Check if a singer can control playback.
+
+        Host can always control. The singer whose song is currently playing
+        can control. Everyone else is denied. If no song is playing, only
+        the host is allowed.
+        """
+        settings = await self.store.get_settings()
+        if requester_id == settings.host_id:
+            return True
+
+        current = await self.store.get_current()
+        if current is not None and current.singer.id == requester_id:
+            return True
+
+        return False
+
     async def update_setting(
         self, requester_id: str, key: str, value: object
     ) -> bool:

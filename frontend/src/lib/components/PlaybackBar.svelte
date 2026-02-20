@@ -2,6 +2,12 @@
 	import { playback, currentItem, getSocket } from '$lib/stores/session';
 	import { get } from 'svelte/store';
 
+	interface Props {
+		disabled?: boolean;
+	}
+
+	let { disabled = false }: Props = $props();
+
 	let playbackState = $state(get(playback));
 	let current = $state(get(currentItem));
 
@@ -107,7 +113,7 @@
 	});
 </script>
 
-<div class="playback-bar">
+<div class="playback-bar" class:disabled>
 	{#if current}
 		<div class="now-playing">
 			<div class="song-title" bind:this={titleOuter}>
@@ -123,13 +129,13 @@
 	{/if}
 
 	<div class="controls">
-		<button class="ctrl-btn" onclick={handlePrevious} title="Previous"><span class="material-icons">skip_previous</span></button>
+		<button class="ctrl-btn" onclick={handlePrevious} title="Previous" {disabled}><span class="material-icons">skip_previous</span></button>
 		{#if playbackState.status === 'playing'}
-			<button class="ctrl-btn" onclick={() => sendPlayback('pause')} title="Pause"><span class="material-icons">pause</span></button>
+			<button class="ctrl-btn" onclick={() => sendPlayback('pause')} title="Pause" {disabled}><span class="material-icons">pause</span></button>
 		{:else}
-			<button class="ctrl-btn" onclick={() => sendPlayback('play')} title="Play"><span class="material-icons">play_arrow</span></button>
+			<button class="ctrl-btn" onclick={() => sendPlayback('play')} title="Play" {disabled}><span class="material-icons">play_arrow</span></button>
 		{/if}
-		<button class="ctrl-btn" onclick={() => sendPlayback('skip')} title="Skip"><span class="material-icons">skip_next</span></button>
+		<button class="ctrl-btn" onclick={() => sendPlayback('skip')} title="Skip" {disabled}><span class="material-icons">skip_next</span></button>
 	</div>
 
 	{#if current}
@@ -143,6 +149,7 @@
 				value={displayPosition}
 				oninput={handleSeekInput}
 				onchange={handleSeekChange}
+				{disabled}
 			/>
 			<span class="time">{formatTime(duration)}</span>
 		</div>
@@ -155,13 +162,13 @@
 			{/if}
 		</div>
 		<div class="pitch-center">
-			<button class="pitch-btn" onclick={() => handlePitch(-1)}>-</button>
+			<button class="pitch-btn" onclick={() => handlePitch(-1)} {disabled}>-</button>
 			<span class="pitch-display">{pitchDisplay}</span>
-			<button class="pitch-btn" onclick={() => handlePitch(1)}>+</button>
+			<button class="pitch-btn" onclick={() => handlePitch(1)} {disabled}>+</button>
 		</div>
 		<div class="pitch-side pitch-right">
 			{#if playbackState.pitch_shift !== 0}
-				<button class="pitch-reset" onclick={resetPitch}>Reset</button>
+				<button class="pitch-reset" onclick={resetPitch} {disabled}>Reset</button>
 			{/if}
 		</div>
 	</div>
@@ -175,6 +182,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+	}
+
+	.playback-bar.disabled :is(button, input[type='range'], .pitch-display) {
+		opacity: 0.35;
+		cursor: not-allowed;
+		pointer-events: none;
 	}
 
 	.now-playing {
