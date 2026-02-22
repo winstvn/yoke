@@ -517,15 +517,19 @@ class MessageRouter:
                 }
             )
 
-            # Save song as cached and detect key
+            # Mark cached and start playback immediately
             song = await self.session.store.get_song(video_id)
             if song:
                 song.cached = True
-                video_path = self.downloader.video_path(video_id)
-                song.detected_key = await detect_key(video_path)
                 await self.session.store.save_song(song)
 
             await self._auto_advance()
+
+            # Detect key after playback starts (can be slow)
+            if song:
+                video_path = self.downloader.video_path(video_id)
+                song.detected_key = await detect_key(video_path)
+                await self.session.store.save_song(song)
 
         except Exception:
             logger.exception("Failed to download video %s", video_id)

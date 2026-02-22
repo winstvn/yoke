@@ -1,5 +1,12 @@
 import uuid
-from yoke.models import Singer, Song, QueueItem, PlaybackState, SessionSettings, SessionState
+from yoke.models import (
+    Singer,
+    Song,
+    QueueItem,
+    PlaybackState,
+    SessionSettings,
+    SessionState,
+)
 
 
 def test_singer_creation():

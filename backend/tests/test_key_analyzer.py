@@ -1,12 +1,13 @@
 from pathlib import Path
-from unittest.mock import patch
 
 import numpy as np
 
 from yoke.key_analyzer import _detect_key_sync, detect_key
 
 
-def _make_sine_wav(path: Path, freq: float = 440.0, sr: int = 22050, duration: float = 2.0) -> None:
+def _make_sine_wav(
+    path: Path, freq: float = 440.0, sr: int = 22050, duration: float = 2.0
+) -> None:
     """Write a mono WAV with a single sine tone."""
     import soundfile as sf
 

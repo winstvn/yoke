@@ -17,13 +17,17 @@ def downloader(tmp_video_dir: Path) -> VideoDownloader:
     return d
 
 
-def test_video_path_returns_default_webm(downloader: VideoDownloader, tmp_video_dir: Path) -> None:
+def test_video_path_returns_default_webm(
+    downloader: VideoDownloader, tmp_video_dir: Path
+) -> None:
     path = downloader.video_path("abc123")
     assert path.parent == tmp_video_dir
     assert path.name == "abc123.webm"
 
 
-def test_video_path_finds_existing_file(downloader: VideoDownloader, tmp_video_dir: Path) -> None:
+def test_video_path_finds_existing_file(
+    downloader: VideoDownloader, tmp_video_dir: Path
+) -> None:
     (tmp_video_dir / "abc123.mp4").write_text("fake video")
     path = downloader.video_path("abc123")
     assert path.parent == tmp_video_dir
