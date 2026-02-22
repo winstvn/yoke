@@ -1,6 +1,5 @@
 import fakeredis.aioredis
 import pytest
-
 from yoke.models import QueueItem, Song
 from yoke.redis_store import RedisStore
 from yoke.session import SessionManager
@@ -25,17 +24,19 @@ def _song(video_id: str = "v1", title: str = "Test Song") -> Song:
 
 
 async def test_join_first_singer_becomes_host(session: SessionManager):
-    singer = await session.join("Alice")
-    assert singer.name == "Alice"
-    assert singer.connected is True
+    result = await session.join("Alice")
+    assert result.singer.name == "Alice"
+    assert result.singer.connected is True
+    assert result.is_new is True
+    singer = result.singer
 
     settings = await session.store.get_settings()
     assert settings.host_id == singer.id
 
 
 async def test_join_second_singer_not_host(session: SessionManager):
-    host = await session.join("Alice")
-    guest = await session.join("Bob")
+    host = (await session.join("Alice")).singer
+    guest = (await session.join("Bob")).singer
 
     settings = await session.store.get_settings()
     assert settings.host_id == host.id
@@ -43,7 +44,7 @@ async def test_join_second_singer_not_host(session: SessionManager):
 
 
 async def test_queue_song(session: SessionManager):
-    singer = await session.join("Alice")
+    singer = (await session.join("Alice")).singer
     song = _song()
 
     item = await session.queue_song(singer.id, song)
@@ -62,7 +63,7 @@ async def test_queue_song_unknown_singer(session: SessionManager):
 
 
 async def test_remove_own_song(session: SessionManager):
-    singer = await session.join("Alice")
+    singer = (await session.join("Alice")).singer
     item = await session.queue_song(singer.id, _song())
 
     result = await session.remove_from_queue(item.id, singer.id)
@@ -73,8 +74,8 @@ async def test_remove_own_song(session: SessionManager):
 
 
 async def test_remove_others_song_as_host(session: SessionManager):
-    host = await session.join("Alice")
-    guest = await session.join("Bob")
+    host = (await session.join("Alice")).singer
+    guest = (await session.join("Bob")).singer
     item = await session.queue_song(guest.id, _song())
 
     result = await session.remove_from_queue(item.id, host.id)
@@ -85,9 +86,9 @@ async def test_remove_others_song_as_host(session: SessionManager):
 
 
 async def test_remove_others_song_as_non_host_fails(session: SessionManager):
-    _host = await session.join("Alice")
-    guest = await session.join("Bob")
-    guest2 = await session.join("Charlie")
+    _host = (await session.join("Alice")).singer
+    guest = (await session.join("Bob")).singer
+    guest2 = (await session.join("Charlie")).singer
     item = await session.queue_song(guest.id, _song())
 
     result = await session.remove_from_queue(item.id, guest2.id)
@@ -98,7 +99,7 @@ async def test_remove_others_song_as_non_host_fails(session: SessionManager):
 
 
 async def test_reorder_as_host(session: SessionManager):
-    host = await session.join("Alice")
+    host = (await session.join("Alice")).singer
     item1 = await session.queue_song(host.id, _song("v1", "Song A"))
     item2 = await session.queue_song(host.id, _song("v2", "Song B"))
 
@@ -111,8 +112,8 @@ async def test_reorder_as_host(session: SessionManager):
 
 
 async def test_reorder_as_non_host_denied_by_default(session: SessionManager):
-    host = await session.join("Alice")
-    guest = await session.join("Bob")
+    host = (await session.join("Alice")).singer
+    guest = (await session.join("Bob")).singer
     item1 = await session.queue_song(host.id, _song("v1", "Song A"))
     item2 = await session.queue_song(host.id, _song("v2", "Song B"))
 
@@ -126,8 +127,8 @@ async def test_reorder_as_non_host_denied_by_default(session: SessionManager):
 
 
 async def test_reorder_as_non_host_allowed_when_setting_on(session: SessionManager):
-    host = await session.join("Alice")
-    guest = await session.join("Bob")
+    host = (await session.join("Alice")).singer
+    guest = (await session.join("Bob")).singer
     item1 = await session.queue_song(host.id, _song("v1", "Song A"))
     item2 = await session.queue_song(host.id, _song("v2", "Song B"))
 
@@ -143,7 +144,7 @@ async def test_reorder_as_non_host_allowed_when_setting_on(session: SessionManag
 
 
 async def test_skip_advances_queue(session: SessionManager):
-    host = await session.join("Alice")
+    host = (await session.join("Alice")).singer
     item1 = await session.queue_song(host.id, _song("v1", "Song A"))
     item2 = await session.queue_song(host.id, _song("v2", "Song B"))
 
@@ -182,7 +183,7 @@ async def test_skip_advances_queue(session: SessionManager):
 
 
 async def test_rejoin_with_singer_id_preserves_host(session: SessionManager):
-    host = await session.join("Alice")
+    host = (await session.join("Alice")).singer
     original_id = host.id
 
     # Simulate disconnect
@@ -192,9 +193,10 @@ async def test_rejoin_with_singer_id_preserves_host(session: SessionManager):
     assert singer.connected is False
 
     # Rejoin with the same singer_id
-    reclaimed = await session.join("Alice", singer_id=original_id)
-    assert reclaimed.id == original_id
-    assert reclaimed.connected is True
+    result = await session.join("Alice", singer_id=original_id)
+    assert result.singer.id == original_id
+    assert result.singer.connected is True
+    assert result.is_new is False
 
     # Host should still be the same
     settings = await session.store.get_settings()
@@ -202,15 +204,16 @@ async def test_rejoin_with_singer_id_preserves_host(session: SessionManager):
 
 
 async def test_rejoin_with_invalid_singer_id_creates_new(session: SessionManager):
-    singer = await session.join("Alice", singer_id="nonexistent-id")
-    assert singer.id != "nonexistent-id"
-    assert singer.name == "Alice"
+    result = await session.join("Alice", singer_id="nonexistent-id")
+    assert result.singer.id != "nonexistent-id"
+    assert result.singer.name == "Alice"
+    assert result.is_new is True
 
 
 async def test_advance_queue_pushes_current_to_history(session: SessionManager):
-    host = await session.join("Alice")
-    item1 = await session.queue_song(host.id, _song("v1", "Song A"))
-    item2 = await session.queue_song(host.id, _song("v2", "Song B"))
+    host = (await session.join("Alice")).singer
+    await session.queue_song(host.id, _song("v1", "Song A"))
+    await session.queue_song(host.id, _song("v2", "Song B"))
 
     # Advance to item1
     await session.advance_queue()
@@ -225,9 +228,9 @@ async def test_advance_queue_pushes_current_to_history(session: SessionManager):
 
 
 async def test_go_previous_moves_history_to_current(session: SessionManager):
-    host = await session.join("Alice")
-    item1 = await session.queue_song(host.id, _song("v1", "Song A"))
-    item2 = await session.queue_song(host.id, _song("v2", "Song B"))
+    host = (await session.join("Alice")).singer
+    await session.queue_song(host.id, _song("v1", "Song A"))
+    await session.queue_song(host.id, _song("v2", "Song B"))
 
     # Play A then skip to B
     await session.advance_queue()
@@ -254,8 +257,8 @@ async def test_go_previous_moves_history_to_current(session: SessionManager):
 
 
 async def test_go_previous_returns_none_when_no_history(session: SessionManager):
-    host = await session.join("Alice")
-    item1 = await session.queue_song(host.id, _song("v1", "Song A"))
+    host = (await session.join("Alice")).singer
+    await session.queue_song(host.id, _song("v1", "Song A"))
 
     await session.advance_queue()
 
@@ -270,7 +273,7 @@ async def test_go_previous_returns_none_when_no_history(session: SessionManager)
 
 async def test_multiple_previous_preserves_order(session: SessionManager):
     """Skip through A→B→C, then previous back C→B→A."""
-    host = await session.join("Alice")
+    host = (await session.join("Alice")).singer
     await session.queue_song(host.id, _song("v1", "Song A"))
     await session.queue_song(host.id, _song("v2", "Song B"))
     await session.queue_song(host.id, _song("v3", "Song C"))
@@ -301,7 +304,7 @@ async def test_multiple_previous_preserves_order(session: SessionManager):
 
 async def test_skip_after_previous(session: SessionManager):
     """Skip A→B→C, previous back to B, skip forward → plays C again."""
-    host = await session.join("Alice")
+    host = (await session.join("Alice")).singer
     await session.queue_song(host.id, _song("v1", "Song A"))
     await session.queue_song(host.id, _song("v2", "Song B"))
     await session.queue_song(host.id, _song("v3", "Song C"))
@@ -326,7 +329,7 @@ async def test_skip_after_previous(session: SessionManager):
 
 async def test_queue_after_previous(session: SessionManager):
     """Skip A→B, previous back to A (B to queue front), queue D, skip → B, then D."""
-    host = await session.join("Alice")
+    host = (await session.join("Alice")).singer
     await session.queue_song(host.id, _song("v1", "Song A"))
     await session.queue_song(host.id, _song("v2", "Song B"))
 
@@ -359,10 +362,10 @@ async def test_queue_after_previous(session: SessionManager):
 
 
 async def test_can_control_playback_host_always_allowed(session: SessionManager):
-    host = await session.join("Alice")
-    guest = await session.join("Bob")
+    host = (await session.join("Alice")).singer
+    guest = (await session.join("Bob")).singer
     # Queue a song as guest and set it as current
-    item = await session.queue_song(guest.id, _song())
+    await session.queue_song(guest.id, _song())
     await session.advance_queue()
 
     # Host can control even though it's guest's song
@@ -370,27 +373,29 @@ async def test_can_control_playback_host_always_allowed(session: SessionManager)
 
 
 async def test_can_control_playback_current_singer_allowed(session: SessionManager):
-    _host = await session.join("Alice")
-    guest = await session.join("Bob")
-    item = await session.queue_song(guest.id, _song())
+    await session.join("Alice")
+
+    guest = (await session.join("Bob")).singer
+    await session.queue_song(guest.id, _song())
     await session.advance_queue()
 
     assert await session.can_control_playback(guest.id) is True
 
 
 async def test_can_control_playback_other_singer_denied(session: SessionManager):
-    _host = await session.join("Alice")
-    guest = await session.join("Bob")
-    other = await session.join("Charlie")
-    item = await session.queue_song(guest.id, _song())
+    await session.join("Alice")
+
+    guest = (await session.join("Bob")).singer
+    other = (await session.join("Charlie")).singer
+    await session.queue_song(guest.id, _song())
     await session.advance_queue()
 
     assert await session.can_control_playback(other.id) is False
 
 
 async def test_can_control_playback_no_current_song(session: SessionManager):
-    host = await session.join("Alice")
-    guest = await session.join("Bob")
+    host = (await session.join("Alice")).singer
+    guest = (await session.join("Bob")).singer
 
     # No current song — host allowed, guest denied
     assert await session.can_control_playback(host.id) is True
@@ -398,8 +403,8 @@ async def test_can_control_playback_no_current_song(session: SessionManager):
 
 
 async def test_update_setting_host_only(session: SessionManager):
-    host = await session.join("Alice")
-    guest = await session.join("Bob")
+    host = (await session.join("Alice")).singer
+    guest = (await session.join("Bob")).singer
 
     # Host can change settings
     result = await session.update_setting(host.id, "anyone_can_reorder", True)
