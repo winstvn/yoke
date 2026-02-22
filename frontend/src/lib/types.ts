@@ -41,7 +41,7 @@ export interface SessionState {
 
 // Server -> Client message types
 export type ServerMessage =
-	| ({ type: 'state' } & SessionState)
+	| ({ type: 'state'; singer_id?: string } & SessionState)
 	| { type: 'singer_joined'; singer: Singer }
 	| { type: 'song_queued'; item: QueueItem }
 	| { type: 'queue_updated'; queue: QueueItem[] }

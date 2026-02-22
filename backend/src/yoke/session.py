@@ -1,14 +1,22 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from yoke.models import PlaybackState, QueueItem, Singer, Song
 from yoke.redis_store import RedisStore
+
+
+@dataclass
+class JoinResult:
+    singer: Singer
+    is_new: bool
 
 
 class SessionManager:
     def __init__(self, store: RedisStore) -> None:
         self.store = store
 
-    async def join(self, name: str, singer_id: str | None = None) -> Singer:
+    async def join(self, name: str, singer_id: str | None = None) -> JoinResult:
         """Create or reclaim a singer and save to store.
 
         If *singer_id* is provided and matches an existing singer, reclaim
@@ -23,7 +31,7 @@ class SessionManager:
                 existing.connected = True
                 existing.name = name
                 await self.store.save_singer(existing)
-                return existing
+                return JoinResult(singer=existing, is_new=False)
 
         singer = Singer(name=name)
         await self.store.save_singer(singer)
@@ -33,7 +41,7 @@ class SessionManager:
             settings.host_id = singer.id
             await self.store.save_settings(settings)
 
-        return singer
+        return JoinResult(singer=singer, is_new=True)
 
     async def disconnect(self, singer_id: str) -> None:
         """Mark a singer as disconnected."""
@@ -164,9 +172,7 @@ class SessionManager:
 
         return False
 
-    async def update_setting(
-        self, requester_id: str, key: str, value: object
-    ) -> bool:
+    async def update_setting(self, requester_id: str, key: str, value: object) -> bool:
         """Update a session setting. Only the host can change settings.
 
         Returns True if changed, False if denied.

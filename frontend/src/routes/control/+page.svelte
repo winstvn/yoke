@@ -9,6 +9,7 @@
 	import SettingsTab from '$lib/components/SettingsTab.svelte';
 	import MessageInput from '$lib/components/MessageInput.svelte';
 	import { getSocket, initSession, settings, currentItem } from '$lib/stores/session';
+	import type { ConnectionState } from '$lib/ws';
 
 
 	const STORAGE_KEY = 'yoke_singer_name';
@@ -20,6 +21,7 @@
 	let singerName = $state('');
 	let singerId = $state('');
 	let activeTab = $state(restoreTab());
+	let connectionState: ConnectionState = $state('disconnected');
 
 	function restoreTab(): string {
 		if (typeof sessionStorage === 'undefined') return 'Search';
@@ -62,8 +64,18 @@
 			}
 		});
 
-		const savedId = localStorage.getItem(STORAGE_ID_KEY) ?? undefined;
-		socket.send({ type: 'join', name, singer_id: savedId });
+		// Re-send join on every connect/reconnect
+		socket.onOpen(() => {
+			const savedId = localStorage.getItem(STORAGE_ID_KEY) ?? undefined;
+			socket.send({ type: 'join', name: singerName, singer_id: savedId });
+		});
+
+		// Track connection state for the UI
+		connectionState = socket.connectionState;
+		socket.onStateChange((state) => {
+			connectionState = state;
+		});
+
 		joined = true;
 	}
 
@@ -87,7 +99,7 @@
 {#if !joined}
 	<NameEntry onJoin={handleJoin} />
 {:else}
-	<TopBar {singerName} {activeTab} {isHost} onTabChange={handleTabChange} />
+	<TopBar {singerName} {activeTab} {isHost} {connectionState} onTabChange={handleTabChange} />
 
 	<main class="content">
 		{#if activeTab === 'Search'}

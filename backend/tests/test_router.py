@@ -379,9 +379,7 @@ async def test_handle_reorder_queue(setup):
     item2 = await session.queue_song(ws.singer_id, _song("v2", "Song B"))
     ws.send_json.reset_mock()
 
-    await router.handle(
-        ws, {"type": "reorder_queue", "item_ids": [item2.id, item1.id]}
-    )
+    await router.handle(ws, {"type": "reorder_queue", "item_ids": [item2.id, item1.id]})
 
     queue = await store.get_queue()
     assert queue[0].id == item2.id
@@ -608,3 +606,26 @@ async def test_pitch_denied_for_non_singer(setup):
 
     playback = await store.get_playback()
     assert playback.pitch_shift == 0  # unchanged
+
+
+async def test_rejoin_cleans_up_stale_connection(setup):
+    router, connections, session, store = setup
+
+    # First connection joins
+    ws_old = make_mock_ws()
+    await router.handle(ws_old, {"type": "join", "name": "Alice"})
+    singer_id = ws_old.singer_id
+
+    assert ws_old in connections.active_connections
+    assert connections.get_by_singer_id(singer_id) is ws_old
+
+    # Simulate reconnect: new ws rejoins with same singer_id
+    ws_new = make_mock_ws()
+    await router.handle(
+        ws_new, {"type": "join", "name": "Alice", "singer_id": singer_id}
+    )
+
+    # Old ws should be evicted, new ws should be registered
+    assert ws_old not in connections.active_connections
+    assert ws_new in connections.active_connections
+    assert connections.get_by_singer_id(singer_id) is ws_new

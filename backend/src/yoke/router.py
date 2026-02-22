@@ -53,12 +53,16 @@ class MessageRouter:
     # Handlers
     # ------------------------------------------------------------------
 
-    async def _handle_join(
-        self, ws: WebSocket, message: dict[str, Any]
-    ) -> None:
+    async def _handle_join(self, ws: WebSocket, message: dict[str, Any]) -> None:
         name = message.get("name", "Anonymous")
         singer_id = message.get("singer_id")
-        singer = await self.session.join(name, singer_id=singer_id)
+        result = await self.session.join(name, singer_id=singer_id)
+        singer = result.singer
+
+        # Evict any stale WebSocket for this singer before registering the new one
+        old_ws = self.connections.get_by_singer_id(singer.id)
+        if old_ws is not None and old_ws is not ws:
+            self.connections.disconnect(old_ws)
 
         # Associate this websocket with the singer
         ws.singer_id = singer.id  # type: ignore[attr-defined]
@@ -66,28 +70,30 @@ class MessageRouter:
 
         # Send the full state to the new client, including their own singer ID
         state = await self.session.store.get_full_state()
-        await self.connections.send_to(ws, {
-            "type": "state",
-            "singer_id": singer.id,
-            "singers": [s.model_dump() for s in state.singers],
-            "queue": [item.model_dump() for item in state.queue],
-            "current": state.current.model_dump() if state.current else None,
-            "playback": state.playback.model_dump(),
-            "settings": state.settings.model_dump(),
-        })
-
-        # Broadcast to others that a new singer joined
-        await self.connections.broadcast(
+        await self.connections.send_to(
+            ws,
             {
-                "type": "singer_joined",
-                "singer": singer.model_dump(),
+                "type": "state",
+                "singer_id": singer.id,
+                "singers": [s.model_dump() for s in state.singers],
+                "queue": [item.model_dump() for item in state.queue],
+                "current": state.current.model_dump() if state.current else None,
+                "playback": state.playback.model_dump(),
+                "settings": state.settings.model_dump(),
             },
-            exclude=ws,
         )
 
-    async def _handle_search(
-        self, ws: WebSocket, message: dict[str, Any]
-    ) -> None:
+        # Only broadcast to others for genuinely new singers, not reconnects
+        if result.is_new:
+            await self.connections.broadcast(
+                {
+                    "type": "singer_joined",
+                    "singer": singer.model_dump(),
+                },
+                exclude=ws,
+            )
+
+    async def _handle_search(self, ws: WebSocket, message: dict[str, Any]) -> None:
         query = message.get("query", "")
         if not query:
             await self.connections.send_to(
@@ -109,14 +115,15 @@ class MessageRouter:
             await self.session.store.save_song(song)
             songs.append(song.model_dump())
 
-        await self.connections.send_to(ws, {
-            "type": "search_results",
-            "songs": songs,
-        })
+        await self.connections.send_to(
+            ws,
+            {
+                "type": "search_results",
+                "songs": songs,
+            },
+        )
 
-    async def _handle_queue_song(
-        self, ws: WebSocket, message: dict[str, Any]
-    ) -> None:
+    async def _handle_queue_song(self, ws: WebSocket, message: dict[str, Any]) -> None:
         singer_id = getattr(ws, "singer_id", None)
         if singer_id is None:
             await self.connections.send_to(
@@ -145,14 +152,18 @@ class MessageRouter:
 
         # Broadcast queue update
         queue = await self.session.store.get_queue()
-        await self.connections.broadcast({
-            "type": "queue_updated",
-            "queue": [qi.model_dump() for qi in queue],
-        })
-        await self.connections.broadcast({
-            "type": "song_queued",
-            "item": item.model_dump(),
-        })
+        await self.connections.broadcast(
+            {
+                "type": "queue_updated",
+                "queue": [qi.model_dump() for qi in queue],
+            }
+        )
+        await self.connections.broadcast(
+            {
+                "type": "song_queued",
+                "item": item.model_dump(),
+            }
+        )
 
         # Start download if not cached
         if not self.downloader.is_cached(video_id):
@@ -174,10 +185,12 @@ class MessageRouter:
         success = await self.session.remove_from_queue(item_id, singer_id)
         if success:
             queue = await self.session.store.get_queue()
-            await self.connections.broadcast({
-                "type": "queue_updated",
-                "queue": [qi.model_dump() for qi in queue],
-            })
+            await self.connections.broadcast(
+                {
+                    "type": "queue_updated",
+                    "queue": [qi.model_dump() for qi in queue],
+                }
+            )
         else:
             await self.connections.send_to(
                 ws, {"type": "error", "message": "Cannot remove that item"}
@@ -197,18 +210,18 @@ class MessageRouter:
         success = await self.session.reorder_queue(item_ids, singer_id)
         if success:
             queue = await self.session.store.get_queue()
-            await self.connections.broadcast({
-                "type": "queue_updated",
-                "queue": [qi.model_dump() for qi in queue],
-            })
+            await self.connections.broadcast(
+                {
+                    "type": "queue_updated",
+                    "queue": [qi.model_dump() for qi in queue],
+                }
+            )
         else:
             await self.connections.send_to(
                 ws, {"type": "error", "message": "Cannot reorder queue"}
             )
 
-    async def _handle_playback(
-        self, ws: WebSocket, message: dict[str, Any]
-    ) -> None:
+    async def _handle_playback(self, ws: WebSocket, message: dict[str, Any]) -> None:
         if await self._require_playback_control(ws) is None:
             return
 
@@ -229,18 +242,24 @@ class MessageRouter:
             queue = await self.session.store.get_queue()
             playback = await self.session.store.get_playback()
 
-            await self.connections.broadcast({
-                "type": "now_playing",
-                "item": current.model_dump() if current else None,
-            })
-            await self.connections.broadcast({
-                "type": "queue_updated",
-                "queue": [qi.model_dump() for qi in queue],
-            })
-            await self.connections.broadcast({
-                "type": "playback_updated",
-                "playback": playback.model_dump(),
-            })
+            await self.connections.broadcast(
+                {
+                    "type": "now_playing",
+                    "item": current.model_dump() if current else None,
+                }
+            )
+            await self.connections.broadcast(
+                {
+                    "type": "queue_updated",
+                    "queue": [qi.model_dump() for qi in queue],
+                }
+            )
+            await self.connections.broadcast(
+                {
+                    "type": "playback_updated",
+                    "playback": playback.model_dump(),
+                }
+            )
             return
         elif action == "previous":
             result = await self.session.go_previous()
@@ -249,25 +268,33 @@ class MessageRouter:
                 playback.status = "playing"
                 playback.position_seconds = 0.0
                 await self.session.store.save_playback(playback)
-                await self.connections.broadcast({
-                    "type": "playback_updated",
-                    "playback": playback.model_dump(),
-                })
+                await self.connections.broadcast(
+                    {
+                        "type": "playback_updated",
+                        "playback": playback.model_dump(),
+                    }
+                )
             else:
                 queue = await self.session.store.get_queue()
                 playback = await self.session.store.get_playback()
-                await self.connections.broadcast({
-                    "type": "now_playing",
-                    "item": result.model_dump(),
-                })
-                await self.connections.broadcast({
-                    "type": "queue_updated",
-                    "queue": [qi.model_dump() for qi in queue],
-                })
-                await self.connections.broadcast({
-                    "type": "playback_updated",
-                    "playback": playback.model_dump(),
-                })
+                await self.connections.broadcast(
+                    {
+                        "type": "now_playing",
+                        "item": result.model_dump(),
+                    }
+                )
+                await self.connections.broadcast(
+                    {
+                        "type": "queue_updated",
+                        "queue": [qi.model_dump() for qi in queue],
+                    }
+                )
+                await self.connections.broadcast(
+                    {
+                        "type": "playback_updated",
+                        "playback": playback.model_dump(),
+                    }
+                )
             return
         else:
             await self.connections.send_to(
@@ -276,14 +303,14 @@ class MessageRouter:
             return
 
         await self.session.store.save_playback(playback)
-        await self.connections.broadcast({
-            "type": "playback_updated",
-            "playback": playback.model_dump(),
-        })
+        await self.connections.broadcast(
+            {
+                "type": "playback_updated",
+                "playback": playback.model_dump(),
+            }
+        )
 
-    async def _handle_seek(
-        self, ws: WebSocket, message: dict[str, Any]
-    ) -> None:
+    async def _handle_seek(self, ws: WebSocket, message: dict[str, Any]) -> None:
         if await self._require_playback_control(ws) is None:
             return
 
@@ -292,14 +319,14 @@ class MessageRouter:
         playback.position_seconds = float(position)
         await self.session.store.save_playback(playback)
 
-        await self.connections.broadcast({
-            "type": "playback_updated",
-            "playback": playback.model_dump(),
-        })
+        await self.connections.broadcast(
+            {
+                "type": "playback_updated",
+                "playback": playback.model_dump(),
+            }
+        )
 
-    async def _handle_pitch(
-        self, ws: WebSocket, message: dict[str, Any]
-    ) -> None:
+    async def _handle_pitch(self, ws: WebSocket, message: dict[str, Any]) -> None:
         if await self._require_playback_control(ws) is None:
             return
 
@@ -311,10 +338,12 @@ class MessageRouter:
         playback.pitch_shift = value
         await self.session.store.save_playback(playback)
 
-        await self.connections.broadcast({
-            "type": "playback_updated",
-            "playback": playback.model_dump(),
-        })
+        await self.connections.broadcast(
+            {
+                "type": "playback_updated",
+                "playback": playback.model_dump(),
+            }
+        )
 
     async def _handle_position_update(
         self, ws: WebSocket, message: dict[str, Any]
@@ -356,14 +385,14 @@ class MessageRouter:
             return
 
         settings = await self.session.store.get_settings()
-        await self.connections.broadcast({
-            "type": "settings_updated",
-            "settings": settings.model_dump(),
-        })
+        await self.connections.broadcast(
+            {
+                "type": "settings_updated",
+                "settings": settings.model_dump(),
+            }
+        )
 
-    async def _handle_show_qr(
-        self, ws: WebSocket, message: dict[str, Any]
-    ) -> None:
+    async def _handle_show_qr(self, ws: WebSocket, message: dict[str, Any]) -> None:
         await self.connections.broadcast({"type": "show_qr"})
 
     async def _handle_screen_message(
@@ -378,11 +407,13 @@ class MessageRouter:
             if singer:
                 name = singer.name
 
-        await self.connections.broadcast({
-            "type": "screen_message",
-            "name": name,
-            "text": text,
-        })
+        await self.connections.broadcast(
+            {
+                "type": "screen_message",
+                "name": name,
+                "text": text,
+            }
+        )
 
     # ------------------------------------------------------------------
     # Permission helpers
@@ -427,18 +458,24 @@ class MessageRouter:
         queue = await self.session.store.get_queue()
         playback = await self.session.store.get_playback()
 
-        await self.connections.broadcast({
-            "type": "now_playing",
-            "item": item.model_dump() if item else None,
-        })
-        await self.connections.broadcast({
-            "type": "queue_updated",
-            "queue": [qi.model_dump() for qi in queue],
-        })
-        await self.connections.broadcast({
-            "type": "playback_updated",
-            "playback": playback.model_dump(),
-        })
+        await self.connections.broadcast(
+            {
+                "type": "now_playing",
+                "item": item.model_dump() if item else None,
+            }
+        )
+        await self.connections.broadcast(
+            {
+                "type": "queue_updated",
+                "queue": [qi.model_dump() for qi in queue],
+            }
+        )
+        await self.connections.broadcast(
+            {
+                "type": "playback_updated",
+                "playback": playback.model_dump(),
+            }
+        )
 
     async def _download_video(self, item_id: str, video_id: str) -> None:
         """Download a video, updating queue item status and broadcasting progress."""
@@ -446,22 +483,26 @@ class MessageRouter:
             # Update status to downloading
             await self.session.store.update_queue_item(item_id, status="downloading")
             queue = await self.session.store.get_queue()
-            await self.connections.broadcast({
-                "type": "queue_updated",
-                "queue": [qi.model_dump() for qi in queue],
-            })
+            await self.connections.broadcast(
+                {
+                    "type": "queue_updated",
+                    "queue": [qi.model_dump() for qi in queue],
+                }
+            )
 
             loop = asyncio.get_running_loop()
 
             def on_progress(pct: float) -> None:
                 loop.call_soon_threadsafe(
                     asyncio.ensure_future,
-                    self.connections.broadcast({
-                        "type": "download_progress",
-                        "item_id": item_id,
-                        "video_id": video_id,
-                        "progress": pct,
-                    }),
+                    self.connections.broadcast(
+                        {
+                            "type": "download_progress",
+                            "item_id": item_id,
+                            "video_id": video_id,
+                            "progress": pct,
+                        }
+                    ),
                 )
 
             await self.downloader.download(video_id, on_progress=on_progress)
@@ -469,10 +510,12 @@ class MessageRouter:
             # Update status to ready
             await self.session.store.update_queue_item(item_id, status="ready")
             queue = await self.session.store.get_queue()
-            await self.connections.broadcast({
-                "type": "queue_updated",
-                "queue": [qi.model_dump() for qi in queue],
-            })
+            await self.connections.broadcast(
+                {
+                    "type": "queue_updated",
+                    "queue": [qi.model_dump() for qi in queue],
+                }
+            )
 
             # Save song as cached and detect key
             song = await self.session.store.get_song(video_id)
@@ -486,8 +529,10 @@ class MessageRouter:
 
         except Exception:
             logger.exception("Failed to download video %s", video_id)
-            await self.connections.broadcast({
-                "type": "download_error",
-                "item_id": item_id,
-                "video_id": video_id,
-            })
+            await self.connections.broadcast(
+                {
+                    "type": "download_error",
+                    "item_id": item_id,
+                    "video_id": video_id,
+                }
+            )

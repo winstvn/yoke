@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import socket
 from collections.abc import AsyncGenerator
@@ -16,6 +17,8 @@ from yoke.redis_store import RedisStore
 from yoke.router import MessageRouter
 from yoke.session import SessionManager
 from yoke.ws import ConnectionManager
+
+logger = logging.getLogger(__name__)
 
 
 def _get_local_ip() -> str:
@@ -99,31 +102,38 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     connections.connect(websocket, singer_id=None)
 
-    # Send full state to every new connection (needed for display page)
-    if router:
-        state = await router.session.store.get_full_state()
-        await connections.send_to(
-            websocket,
-            {
-                "type": "state",
-                "singers": [s.model_dump() for s in state.singers],
-                "queue": [item.model_dump() for item in state.queue],
-                "current": state.current.model_dump() if state.current else None,
-                "playback": state.playback.model_dump(),
-                "settings": state.settings.model_dump(),
-            },
-        )
-
     try:
+        # Send full state to every new connection (needed for display page)
+        if router:
+            state = await router.session.store.get_full_state()
+            await connections.send_to(
+                websocket,
+                {
+                    "type": "state",
+                    "singers": [s.model_dump() for s in state.singers],
+                    "queue": [item.model_dump() for item in state.queue],
+                    "current": state.current.model_dump() if state.current else None,
+                    "playback": state.playback.model_dump(),
+                    "settings": state.settings.model_dump(),
+                },
+            )
+
         while True:
             data = await websocket.receive_json()
             if router:
                 await router.handle(websocket, data)
     except WebSocketDisconnect:
+        pass
+    except Exception:
+        logger.exception("WebSocket connection error")
+    finally:
         singer_id = getattr(websocket, "singer_id", None)
         connections.disconnect(websocket)
         if singer_id and router:
-            await router.session.disconnect(singer_id)
+            # Only mark as disconnected if no other connection exists for this singer
+            # (prevents race where old connection cleanup runs after a rejoin)
+            if connections.get_by_singer_id(singer_id) is None:
+                await router.session.disconnect(singer_id)
 
 
 # Serve frontend static files in production

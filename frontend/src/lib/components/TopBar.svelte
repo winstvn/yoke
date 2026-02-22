@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { getSocket } from '$lib/stores/session';
+	import type { ConnectionState } from '$lib/ws';
 
 	let {
 		singerName,
 		activeTab,
 		isHost,
-		onTabChange
+		onTabChange,
+		connectionState = 'disconnected'
 	}: {
 		singerName: string;
 		activeTab: string;
 		isHost: boolean;
 		onTabChange: (tab: string) => void;
+		connectionState?: ConnectionState;
 	} = $props();
 
 	const tabs = $derived(
@@ -28,7 +31,15 @@
 	<div class="header-row">
 		<span class="app-name">Yoke</span>
 		<div class="header-right">
-			<span class="singer-name">{singerName}</span>
+			<span class="singer-name">
+				<span
+					class="status-dot"
+					class:connected={connectionState === 'connected'}
+					class:connecting={connectionState === 'connecting'}
+					class:disconnected={connectionState === 'disconnected'}
+				></span>
+				{singerName}
+			</span>
 			<button class="qr-button" onclick={handleQr} title="Show QR code">QR</button>
 		</div>
 	</div>
@@ -74,8 +85,33 @@
 	}
 
 	.singer-name {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
 		color: var(--text-secondary);
 		font-size: 0.9rem;
+	}
+
+	.status-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.status-dot.connected {
+		background-color: #4ade80;
+		box-shadow: 0 0 4px #4ade80;
+	}
+
+	.status-dot.connecting {
+		background-color: #facc15;
+		box-shadow: 0 0 4px #facc15;
+	}
+
+	.status-dot.disconnected {
+		background-color: #f87171;
+		box-shadow: 0 0 4px #f87171;
 	}
 
 	.qr-button {
