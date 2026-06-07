@@ -8,20 +8,20 @@ export FRONTEND_PORT
 
 # Development (hot reload)
 dev:
-	docker compose -f docker-compose.dev.yml up
+	docker compose -f docker-compose.dev.yml up --remove-orphans
 
 dev-build:
-	docker compose -f docker-compose.dev.yml up --build -d
+	docker compose -f docker-compose.dev.yml up --build --remove-orphans -d
 
 dev-down:
 	docker compose -f docker-compose.dev.yml down
 
 # Production
 up:
-	docker compose up -d
+	docker compose up --remove-orphans -d
 
 build:
-	docker compose up -d --build
+	docker compose up --build --remove-orphans -d
 
 down:
 	docker compose down

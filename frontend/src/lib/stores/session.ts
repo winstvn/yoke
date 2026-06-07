@@ -114,7 +114,9 @@ export function initSession(sock: YokeSocket): void {
 
 			case 'now_playing':
 				currentItem.set(msg.item);
-				addNotification(`Now playing: "${msg.item.song.title}"`);
+				if (msg.item) {
+					addNotification(`Now playing: "${msg.item.song.title}"`);
+				}
 				break;
 
 			case 'up_next':

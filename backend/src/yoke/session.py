@@ -120,6 +120,7 @@ class SessionManager:
         queue = await self.store.get_queue()
         if not queue:
             await self.store.clear_current()
+            await self.store.save_playback(PlaybackState(status="stopped"))
             return None
 
         item = queue[0]
