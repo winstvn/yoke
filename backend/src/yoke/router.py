@@ -238,28 +238,7 @@ class MessageRouter:
             playback.status = "playing"
             playback.position_seconds = 0.0
         elif action == "skip":
-            current = await self.session.advance_queue()
-            queue = await self.session.store.get_queue()
-            playback = await self.session.store.get_playback()
-
-            await self.connections.broadcast(
-                {
-                    "type": "now_playing",
-                    "item": current.model_dump() if current else None,
-                }
-            )
-            await self.connections.broadcast(
-                {
-                    "type": "queue_updated",
-                    "queue": [qi.model_dump() for qi in queue],
-                }
-            )
-            await self.connections.broadcast(
-                {
-                    "type": "playback_updated",
-                    "playback": playback.model_dump(),
-                }
-            )
+            await self._advance_and_broadcast()
             return
         elif action == "previous":
             result = await self.session.go_previous()
@@ -392,6 +371,27 @@ class MessageRouter:
             }
         )
 
+    async def _handle_song_ended(self, ws: WebSocket, message: dict[str, Any]) -> None:
+        """Advance the queue when the display reports the current video ended.
+
+        This is an automatic playback event fired by the display's <video>
+        element, not a user action, so it is intentionally NOT gated by
+        ``_require_playback_control`` — the display never "joins" as a singer.
+
+        To stay safe against races (e.g. a host pressed Skip just before the
+        video naturally finished), we only advance when the song that ended is
+        still the current one.
+        """
+        ended_item_id = message.get("item_id")
+        current = await self.session.store.get_current()
+        if current is None:
+            return
+        if ended_item_id is not None and ended_item_id != current.id:
+            # The ended song has already been replaced — ignore the stale event.
+            return
+
+        await self._advance_and_broadcast()
+
     async def _handle_show_qr(self, ws: WebSocket, message: dict[str, Any]) -> None:
         await self.connections.broadcast({"type": "show_qr"})
 
@@ -454,6 +454,14 @@ class MessageRouter:
         if current is not None:
             return
 
+        await self._advance_and_broadcast()
+
+    async def _advance_and_broadcast(self) -> None:
+        """Pop the next song into 'current' and broadcast the resulting state.
+
+        Used by both the manual Skip action and the display's automatic
+        end-of-song event.
+        """
         item = await self.session.advance_queue()
         queue = await self.session.store.get_queue()
         playback = await self.session.store.get_playback()

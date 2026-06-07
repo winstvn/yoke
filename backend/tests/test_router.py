@@ -181,6 +181,83 @@ async def test_handle_playback_skip(setup):
     assert len(now_playing_msgs) > 0
 
 
+async def test_song_ended_advances_without_join(setup):
+    """The display page is never "joined" — when its video ends it must still
+    be able to advance the queue without hitting the playback-control gate."""
+    router, connections, session, store = setup
+
+    # A joined singer queues a song and it becomes current.
+    ws_singer = make_mock_ws()
+    await router.handle(ws_singer, {"type": "join", "name": "Alice"})
+    await session.queue_song(ws_singer.singer_id, _song("v1", "Song A"))
+    await session.queue_song(ws_singer.singer_id, _song("v2", "Song B"))
+    await session.advance_queue()  # v1 is now current
+
+    # The display socket has never joined (no singer_id).
+    ws_display = make_mock_ws()
+
+    await router.handle(
+        ws_display, {"type": "song_ended", "item_id": (await store.get_current()).id}
+    )
+
+    # Should NOT have received a "Not joined" error.
+    sent = [call[0][0] for call in ws_display.send_json.call_args_list]
+    error_msgs = [m for m in sent if m.get("type") == "error"]
+    assert error_msgs == []
+
+    # Queue should have advanced to v2.
+    current = await store.get_current()
+    assert current is not None
+    assert current.song.video_id == "v2"
+
+
+async def test_song_ended_broadcasts_now_playing(setup):
+    router, connections, session, store = setup
+
+    ws = make_mock_ws()
+    await router.handle(ws, {"type": "join", "name": "Alice"})
+    await session.queue_song(ws.singer_id, _song("v1", "Song A"))
+    await session.queue_song(ws.singer_id, _song("v2", "Song B"))
+    await session.advance_queue()  # v1 current
+    ws.send_json.reset_mock()
+
+    await router.handle(
+        ws, {"type": "song_ended", "item_id": (await store.get_current()).id}
+    )
+
+    sent = [call[0][0] for call in ws.send_json.call_args_list]
+    now_playing = [m for m in sent if m.get("type") == "now_playing"]
+    assert len(now_playing) == 1
+    assert now_playing[0]["item"]["song"]["video_id"] == "v2"
+    assert [m for m in sent if m.get("type") == "queue_updated"]
+    assert [m for m in sent if m.get("type") == "playback_updated"]
+
+
+async def test_song_ended_stale_item_id_ignored(setup):
+    """If the song that ended is no longer current (e.g. a host already pressed
+    Skip), the late song_ended event must NOT advance the queue again."""
+    router, connections, session, store = setup
+
+    ws = make_mock_ws()
+    await router.handle(ws, {"type": "join", "name": "Alice"})
+    await session.queue_song(ws.singer_id, _song("v1", "Song A"))
+    await session.queue_song(ws.singer_id, _song("v2", "Song B"))
+    await session.advance_queue()  # v1 current
+
+    stale_item_id = "some-old-item-id-that-is-not-current"
+    ws.send_json.reset_mock()
+
+    await router.handle(ws, {"type": "song_ended", "item_id": stale_item_id})
+
+    # Still on v1 — no double advance.
+    current = await store.get_current()
+    assert current is not None
+    assert current.song.video_id == "v1"
+
+    sent = [call[0][0] for call in ws.send_json.call_args_list]
+    assert [m for m in sent if m.get("type") == "now_playing"] == []
+
+
 async def test_handle_pitch(setup):
     router, connections, session, store = setup
 
