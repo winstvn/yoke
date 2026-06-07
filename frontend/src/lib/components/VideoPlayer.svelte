@@ -102,7 +102,10 @@
 	});
 
 	function onEnded() {
-		getSocket().send({ type: 'playback', action: 'skip' });
+		// The display is a passive renderer and never "joins" as a singer, so it
+		// can't use the permission-gated `skip` action. A natural end-of-video is
+		// an automatic event, not a user control — signal it as its own message.
+		getSocket().send({ type: 'song_ended', item_id: current?.id });
 	}
 </script>
 
