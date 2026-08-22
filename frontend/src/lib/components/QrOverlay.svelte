@@ -75,7 +75,9 @@
 		border: 1px solid var(--amber);
 		box-shadow: 0 0 20px var(--amber-glow);
 		text-align: center;
-		max-width: 320px;
+		/* Wide enough for a typical http://<ip>:<port>/control on one line
+		   next to the 240px code; break-all below still catches longer URLs. */
+		max-width: 380px;
 	}
 
 	.qr-label {
