@@ -1,6 +1,6 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { settings, getSocket } from '$lib/stores/session';
-	import { TARGET_LUFS } from '$lib/audio/loudness';
 	import { get } from 'svelte/store';
 
 	let { isHost = false, canControlPlayback = false }: {
@@ -8,10 +8,14 @@
 		canControlPlayback?: boolean;
 	} = $props();
 
+	const PENDING_TIMEOUT_MS = 2000;
+
 	let settingsValue = $state(get(settings));
 	let localVolume = $state(get(settings).volume);
-	let dragging = $state(false);
+	// Value this singer has set but the server has not echoed back yet.
+	let pending: number | null = $state(null);
 	let sendTimer: ReturnType<typeof setTimeout> | null = null;
+	let pendingTimer: ReturnType<typeof setTimeout> | null = null;
 
 	$effect(() => {
 		const unsub = settings.subscribe((val) => {
@@ -22,19 +26,43 @@
 		};
 	});
 
-	// Follow the server unless this singer is mid-drag, so a change made on
-	// another phone shows up here without yanking the slider out from under them.
+	// Follow the server, so a change made on another phone shows up here. While
+	// a local change is in flight, hold it instead -- otherwise the slider snaps
+	// back to the old value until the broadcast lands.
 	$effect(() => {
-		if (!dragging) localVolume = settingsValue.volume;
+		const serverVolume = settingsValue.volume;
+		if (pending === null) {
+			localVolume = serverVolume;
+		} else if (Math.abs(serverVolume - pending) < 1e-9) {
+			clearPending();
+		}
 	});
 
+	function clearPending() {
+		pending = null;
+		if (pendingTimer) {
+			clearTimeout(pendingTimer);
+			pendingTimer = null;
+		}
+	}
+
+	function markPending(value: number) {
+		pending = value;
+		if (pendingTimer) clearTimeout(pendingTimer);
+		// If the server never confirms (a rejected change, a dropped socket),
+		// go back to following it rather than sticking on a value that never took.
+		pendingTimer = setTimeout(clearPending, PENDING_TIMEOUT_MS);
+	}
+
 	function sendVolume(value: number) {
+		markPending(value);
 		getSocket().send({ type: 'update_setting', key: 'volume', value });
 	}
 
 	function handleVolumeInput(e: Event) {
-		dragging = true;
-		localVolume = Number((e.currentTarget as HTMLInputElement).value) / 100;
+		const value = Number((e.currentTarget as HTMLInputElement).value) / 100;
+		localVolume = value;
+		markPending(value);
 		// Throttle while dragging; every send fans out to all clients.
 		if (sendTimer) return;
 		sendTimer = setTimeout(() => {
@@ -44,13 +72,19 @@
 	}
 
 	function handleVolumeCommit() {
-		dragging = false;
+		// Read before anything else can reconcile against the server value.
+		const value = localVolume;
 		if (sendTimer) {
 			clearTimeout(sendTimer);
 			sendTimer = null;
 		}
-		sendVolume(localVolume);
+		sendVolume(value);
 	}
+
+	onDestroy(() => {
+		if (sendTimer) clearTimeout(sendTimer);
+		if (pendingTimer) clearTimeout(pendingTimer);
+	});
 
 	function toggleReorder() {
 		if (!isHost) return;
@@ -84,13 +118,9 @@
 				onchange={handleVolumeCommit}
 				aria-label="Volume"
 			/>
-			<p class="setting-hint">
-				{#if canControlPlayback}
-					Songs are matched to {TARGET_LUFS} LUFS, so levels stay even between tracks.
-				{:else}
-					Only the current singer or the host can change the volume.
-				{/if}
-			</p>
+			{#if !canControlPlayback}
+				<p class="setting-hint">Only the current singer can change the volume.</p>
+			{/if}
 		</div>
 	</section>
 
