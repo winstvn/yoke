@@ -45,8 +45,18 @@
 		};
 	});
 
+	// Mirrors can_control_playback / can_control_volume in session.py. Each
+	// toggle relaxes the same base rule independently of the other.
 	let isHost = $derived(singerId !== '' && settingsValue.host_id === singerId);
-	let canControlPlayback = $derived(isHost || (current !== null && current.singer.id === singerId));
+	let isHostOrCurrentSinger = $derived(
+		isHost || (current !== null && current.singer.id === singerId)
+	);
+	let canControlPlayback = $derived(
+		settingsValue.anyone_can_control_playback || isHostOrCurrentSinger
+	);
+	let canControlVolume = $derived(
+		settingsValue.anyone_can_control_volume || isHostOrCurrentSinger
+	);
 
 	function handleJoin(name: string) {
 		singerName = name;
@@ -99,7 +109,7 @@
 {#if !joined}
 	<NameEntry onJoin={handleJoin} />
 {:else}
-	<TopBar {singerName} {activeTab} {connectionState} onTabChange={handleTabChange} />
+	<TopBar {singerName} {activeTab} {isHost} {connectionState} onTabChange={handleTabChange} />
 
 	<main class="content">
 		{#if activeTab === 'Search'}
@@ -107,7 +117,7 @@
 		{:else if activeTab === 'Queue'}
 			<QueueTab {singerId} {isHost} />
 		{:else if activeTab === 'Settings'}
-			<SettingsTab {isHost} {canControlPlayback} />
+			<SettingsTab {isHost} {canControlVolume} />
 		{/if}
 	</main>
 

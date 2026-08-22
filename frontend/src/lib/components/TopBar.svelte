@@ -5,11 +5,13 @@
 	let {
 		singerName,
 		activeTab,
+		isHost = false,
 		onTabChange,
 		connectionState = 'disconnected'
 	}: {
 		singerName: string;
 		activeTab: string;
+		isHost?: boolean;
 		onTabChange: (tab: string) => void;
 		connectionState?: ConnectionState;
 	} = $props();
@@ -33,7 +35,7 @@
 					class:connecting={connectionState === 'connecting'}
 					class:disconnected={connectionState === 'disconnected'}
 				></span>
-				{singerName}
+				{singerName}{#if isHost}<span class="host-tag">(host)</span>{/if}
 			</span>
 			<button class="qr-button" onclick={handleQr} title="Show QR code">QR</button>
 		</div>
@@ -85,6 +87,10 @@
 		gap: 0.4rem;
 		color: var(--text-secondary);
 		font-size: 0.9rem;
+	}
+
+	.host-tag {
+		color: var(--amber);
 	}
 
 	.status-dot {

@@ -7,10 +7,12 @@ from pydantic import ValidationError
 from yoke.models import PlaybackState, QueueItem, SessionSettings, Singer, Song
 from yoke.redis_store import RedisStore
 
-# Only the current singer or the host may change these.
-_PLAYBACK_CONTROL_SETTINGS = frozenset({"volume"})
+# Governed by can_control_volume rather than the host-only rule.
+_VOLUME_SETTINGS = frozenset({"volume"})
 # Only the host may change these.
-_HOST_ONLY_SETTINGS = frozenset({"anyone_can_reorder"})
+_HOST_ONLY_SETTINGS = frozenset(
+    {"anyone_can_reorder", "anyone_can_control_playback", "anyone_can_control_volume"}
+)
 
 
 @dataclass
@@ -162,33 +164,47 @@ class SessionManager:
 
         return prev
 
-    async def can_control_playback(self, requester_id: str) -> bool:
-        """Check if a singer can control playback.
-
-        Host can always control. The singer whose song is currently playing
-        can control. Everyone else is denied. If no song is playing, only
-        the host is allowed.
-        """
+    async def _is_host_or_current_singer(self, requester_id: str) -> bool:
+        """The base rule both playback and volume relax from."""
         settings = await self.store.get_settings()
         if requester_id == settings.host_id:
             return True
 
         current = await self.store.get_current()
-        if current is not None and current.singer.id == requester_id:
-            return True
+        return current is not None and current.singer.id == requester_id
 
-        return False
+    async def can_control_playback(self, requester_id: str) -> bool:
+        """Check if a singer can control playback, seeking and pitch.
+
+        The host and the current singer can always control. Everyone else is
+        denied unless the host has opened playback to everyone.
+        """
+        settings = await self.store.get_settings()
+        if settings.anyone_can_control_playback:
+            return True
+        return await self._is_host_or_current_singer(requester_id)
+
+    async def can_control_volume(self, requester_id: str) -> bool:
+        """Check if a singer can change the volume.
+
+        Independent of the playback toggle: opening playback does not open
+        volume, so each toggle only governs what its label says.
+        """
+        settings = await self.store.get_settings()
+        if settings.anyone_can_control_volume:
+            return True
+        return await self._is_host_or_current_singer(requester_id)
 
     async def update_setting(self, requester_id: str, key: str, value: object) -> bool:
         """Update a session setting.
 
-        Volume follows the playback-control rule (current singer or host);
-        everything else is host-only. Returns False if denied or invalid.
+        Volume follows can_control_volume; everything else is host-only.
+        Returns False if denied or invalid.
         """
         settings = await self.store.get_settings()
 
-        if key in _PLAYBACK_CONTROL_SETTINGS:
-            allowed = await self.can_control_playback(requester_id)
+        if key in _VOLUME_SETTINGS:
+            allowed = await self.can_control_volume(requester_id)
         elif key in _HOST_ONLY_SETTINGS:
             allowed = requester_id == settings.host_id
         else:

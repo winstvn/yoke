@@ -20,6 +20,8 @@ export const playback = writable<PlaybackState>({
 export const settings = writable<SessionSettings>({
 	host_id: null,
 	anyone_can_reorder: false,
+	anyone_can_control_playback: false,
+	anyone_can_control_volume: false,
 	volume: 1
 });
 export const searchQuery = writable('');

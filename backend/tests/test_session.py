@@ -462,6 +462,77 @@ async def test_update_volume_out_of_range_rejected(session: SessionManager):
     assert settings.volume == 1.0
 
 
+async def test_anyone_can_control_playback_opens_playback(session: SessionManager):
+    host = (await session.join("Alice")).singer
+    other = (await session.join("Charlie")).singer
+
+    assert await session.can_control_playback(other.id) is False
+
+    await session.update_setting(host.id, "anyone_can_control_playback", True)
+    assert await session.can_control_playback(other.id) is True
+
+
+async def test_anyone_can_control_playback_does_not_open_volume(session: SessionManager):
+    """The two toggles are independent -- each governs only what it names."""
+    host = (await session.join("Alice")).singer
+    other = (await session.join("Charlie")).singer
+
+    await session.update_setting(host.id, "anyone_can_control_playback", True)
+
+    assert await session.can_control_playback(other.id) is True
+    assert await session.can_control_volume(other.id) is False
+
+    # And the reverse direction stays closed too.
+    await session.update_setting(host.id, "anyone_can_control_playback", False)
+    await session.update_setting(host.id, "anyone_can_control_volume", True)
+
+    assert await session.can_control_volume(other.id) is True
+    assert await session.can_control_playback(other.id) is False
+
+
+async def test_anyone_can_control_volume_lets_others_set_volume(session: SessionManager):
+    host = (await session.join("Alice")).singer
+    other = (await session.join("Charlie")).singer
+
+    assert await session.update_setting(other.id, "volume", 0.2) is False
+
+    await session.update_setting(host.id, "anyone_can_control_volume", True)
+
+    assert await session.update_setting(other.id, "volume", 0.2) is True
+    settings = await session.store.get_settings()
+    assert settings.volume == 0.2
+
+
+async def test_both_toggles_off_keeps_base_rule(session: SessionManager):
+    """With neither toggle on, only the host and the current singer control."""
+    await session.join("Alice")
+    guest = (await session.join("Bob")).singer
+    other = (await session.join("Charlie")).singer
+    await session.queue_song(guest.id, _song())
+    await session.advance_queue()  # guest is the current singer
+
+    assert await session.can_control_playback(guest.id) is True
+    assert await session.can_control_volume(guest.id) is True
+    assert await session.can_control_playback(other.id) is False
+    assert await session.can_control_volume(other.id) is False
+
+
+async def test_new_toggles_are_host_only(session: SessionManager):
+    await session.join("Alice")
+    other = (await session.join("Charlie")).singer
+
+    assert (
+        await session.update_setting(other.id, "anyone_can_control_playback", True)
+    ) is False
+    assert (
+        await session.update_setting(other.id, "anyone_can_control_volume", True)
+    ) is False
+
+    settings = await session.store.get_settings()
+    assert settings.anyone_can_control_playback is False
+    assert settings.anyone_can_control_volume is False
+
+
 async def test_update_setting_rejects_unlisted_keys(session: SessionManager):
     """A client must not be able to reassign the host or invent attributes."""
     host = (await session.join("Alice")).singer
