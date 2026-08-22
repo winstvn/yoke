@@ -19,7 +19,8 @@ export const playback = writable<PlaybackState>({
 });
 export const settings = writable<SessionSettings>({
 	host_id: null,
-	anyone_can_reorder: false
+	anyone_can_reorder: false,
+	volume: 1
 });
 export const searchQuery = writable('');
 // Survives the SearchTab being torn down on tab switches, like searchQuery.

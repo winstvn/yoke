@@ -6,9 +6,11 @@ export class PitchShifter {
 	private ctx: AudioContext | null = null;
 	private source: MediaElementAudioSourceNode | null = null;
 	private processor: ScriptProcessorNode | null = null;
+	private gainNode: GainNode | null = null;
 	private st: SoundTouch | null = null;
 	private connected = false;
 	private semitones = 0;
+	private gain = 1;
 
 	// Pre-allocated buffers to avoid GC pressure in audio callback
 	private interleavedInput = new Float32Array(BUFFER_SIZE * 2);
@@ -65,9 +67,21 @@ export class PitchShifter {
 			}
 		};
 
+		this.gainNode = this.ctx.createGain();
+		this.gainNode.gain.value = this.gain;
+
 		this.source.connect(this.processor);
-		this.processor.connect(this.ctx.destination);
+		this.processor.connect(this.gainNode);
+		this.gainNode.connect(this.ctx.destination);
 		this.connected = true;
+	}
+
+	/** Set output gain (linear). Ramped slightly so slider moves don't click. */
+	setGain(value: number): void {
+		this.gain = Number.isFinite(value) ? Math.max(value, 0) : 1;
+		if (this.gainNode && this.ctx) {
+			this.gainNode.gain.setTargetAtTime(this.gain, this.ctx.currentTime, 0.05);
+		}
 	}
 
 	setPitch(semitones: number): void {
@@ -89,9 +103,11 @@ export class PitchShifter {
 
 	disconnect(): void {
 		this.processor?.disconnect();
+		this.gainNode?.disconnect();
 		this.source?.disconnect();
 		this.ctx?.close();
 		this.processor = null;
+		this.gainNode = null;
 		this.source = null;
 		this.ctx = null;
 		this.st = null;

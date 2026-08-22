@@ -417,3 +417,58 @@ async def test_update_setting_host_only(session: SessionManager):
     assert result is False
     settings = await session.store.get_settings()
     assert settings.anyone_can_reorder is True  # unchanged
+
+
+async def test_update_volume_allowed_for_current_singer(session: SessionManager):
+    """Volume follows the playback-control rule, not the host-only rule."""
+    await session.join("Alice")
+    guest = (await session.join("Bob")).singer
+    await session.queue_song(guest.id, _song())
+    await session.advance_queue()  # guest's song is now current
+
+    assert await session.update_setting(guest.id, "volume", 0.4) is True
+    settings = await session.store.get_settings()
+    assert settings.volume == 0.4
+
+
+async def test_update_volume_allowed_for_host(session: SessionManager):
+    host = (await session.join("Alice")).singer
+
+    assert await session.update_setting(host.id, "volume", 0.25) is True
+    settings = await session.store.get_settings()
+    assert settings.volume == 0.25
+
+
+async def test_update_volume_denied_for_other_singer(session: SessionManager):
+    await session.join("Alice")
+    guest = (await session.join("Bob")).singer
+    other = (await session.join("Charlie")).singer
+    await session.queue_song(guest.id, _song())
+    await session.advance_queue()
+
+    assert await session.update_setting(other.id, "volume", 0.1) is False
+    settings = await session.store.get_settings()
+    assert settings.volume == 1.0  # unchanged
+
+
+async def test_update_volume_out_of_range_rejected(session: SessionManager):
+    host = (await session.join("Alice")).singer
+
+    assert await session.update_setting(host.id, "volume", 5.0) is False
+    assert await session.update_setting(host.id, "volume", -1.0) is False
+    assert await session.update_setting(host.id, "volume", "loud") is False
+
+    settings = await session.store.get_settings()
+    assert settings.volume == 1.0
+
+
+async def test_update_setting_rejects_unlisted_keys(session: SessionManager):
+    """A client must not be able to reassign the host or invent attributes."""
+    host = (await session.join("Alice")).singer
+    other = (await session.join("Bob")).singer
+
+    assert await session.update_setting(host.id, "host_id", other.id) is False
+    assert await session.update_setting(host.id, "nonsense", True) is False
+
+    settings = await session.store.get_settings()
+    assert settings.host_id == host.id

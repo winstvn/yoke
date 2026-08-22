@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from yoke.key_analyzer import detect_key
+from yoke.loudness import measure_loudness
 from yoke.models import Song
 from yoke.youtube import search_youtube
 
@@ -169,7 +170,7 @@ class MessageRouter:
         if not self.downloader.is_cached(video_id):
             asyncio.create_task(self._download_video(item.id, video_id))
         else:
-            await self._auto_advance()
+            asyncio.create_task(self._analyze_and_advance(item.id, video_id))
 
     async def _handle_remove_from_queue(
         self, ws: WebSocket, message: dict[str, Any]
@@ -485,6 +486,54 @@ class MessageRouter:
             }
         )
 
+    async def _analyze_song(self, item_id: str, video_id: str) -> None:
+        """Fill in key and loudness for a song whose file is on disk.
+
+        The queue item embeds its own copy of the Song, so that copy is
+        refreshed too -- otherwise the display never sees the measurement.
+        """
+        song = await self.session.store.get_song(video_id)
+        if song is None:
+            return
+
+        path = self.downloader.video_path(video_id)
+        changed = False
+
+        if not song.cached:
+            song.cached = True
+            changed = True
+        if song.detected_key is None:
+            song.detected_key = await detect_key(path)
+            changed = True
+        if song.loudness_lufs is None:
+            song.loudness_lufs, song.true_peak_db = await measure_loudness(path)
+            changed = True
+
+        if not changed:
+            return
+
+        await self.session.store.save_song(song)
+        await self.session.store.update_queue_item(item_id, song=song)
+        queue = await self.session.store.get_queue()
+        await self.connections.broadcast(
+            {
+                "type": "queue_updated",
+                "queue": [qi.model_dump() for qi in queue],
+            }
+        )
+
+    async def _analyze_and_advance(self, item_id: str, video_id: str) -> None:
+        """Analyse an already-cached song, then start it if nothing is playing.
+
+        Advancing only after analysis means a song never becomes current before
+        its gain is known, so playback does not jump in volume a second in.
+        """
+        try:
+            await self._analyze_song(item_id, video_id)
+        except Exception:
+            logger.exception("Failed to analyze cached video %s", video_id)
+        await self._auto_advance()
+
     async def _download_video(self, item_id: str, video_id: str) -> None:
         """Download a video, updating queue item status and broadcasting progress."""
         try:
@@ -525,13 +574,7 @@ class MessageRouter:
                 }
             )
 
-            # Save song as cached and detect key
-            song = await self.session.store.get_song(video_id)
-            if song:
-                song.cached = True
-                video_path = self.downloader.video_path(video_id)
-                song.detected_key = await detect_key(video_path)
-                await self.session.store.save_song(song)
+            await self._analyze_song(item_id, video_id)
 
             await self._auto_advance()
 

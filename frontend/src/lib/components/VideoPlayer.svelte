@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { PitchShifter } from '$lib/audio/pitch-shifter';
-	import { playback, currentItem, getSocket } from '$lib/stores/session';
+	import { playbackGain } from '$lib/audio/loudness';
+	import { playback, currentItem, settings, getSocket } from '$lib/stores/session';
 	import { get } from 'svelte/store';
 
 	let playbackState = $state(get(playback));
 	let current = $state(get(currentItem));
+	let settingsValue = $state(get(settings));
 
 	$effect(() => {
 		const unsubPlayback = playback.subscribe((val) => {
@@ -14,9 +16,13 @@
 		const unsubCurrent = currentItem.subscribe((val) => {
 			current = val;
 		});
+		const unsubSettings = settings.subscribe((val) => {
+			settingsValue = val;
+		});
 		return () => {
 			unsubPlayback();
 			unsubCurrent();
+			unsubSettings();
 		};
 	});
 
@@ -42,6 +48,14 @@
 	onDestroy(() => {
 		clearInterval(positionInterval);
 		pitchShifter?.disconnect();
+	});
+
+	// Loudness normalization for this song, scaled by the session volume.
+	$effect(() => {
+		const song = current?.song;
+		pitchShifter?.setGain(
+			playbackGain(song?.loudness_lufs ?? null, song?.true_peak_db ?? null, settingsValue.volume)
+		);
 	});
 
 	// Watch for current item changes - load new video
