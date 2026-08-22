@@ -45,14 +45,18 @@
 		};
 	});
 
-	// Mirrors can_control_playback / can_control_volume in session.py.
+	// Mirrors can_control_playback / can_control_volume in session.py. Each
+	// toggle relaxes the same base rule independently of the other.
 	let isHost = $derived(singerId !== '' && settingsValue.host_id === singerId);
-	let canControlPlayback = $derived(
-		settingsValue.anyone_can_control_playback ||
-			isHost ||
-			(current !== null && current.singer.id === singerId)
+	let isHostOrCurrentSinger = $derived(
+		isHost || (current !== null && current.singer.id === singerId)
 	);
-	let canControlVolume = $derived(settingsValue.anyone_can_control_volume || canControlPlayback);
+	let canControlPlayback = $derived(
+		settingsValue.anyone_can_control_playback || isHostOrCurrentSinger
+	);
+	let canControlVolume = $derived(
+		settingsValue.anyone_can_control_volume || isHostOrCurrentSinger
+	);
 
 	function handleJoin(name: string) {
 		singerName = name;

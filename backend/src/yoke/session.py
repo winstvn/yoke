@@ -164,8 +164,17 @@ class SessionManager:
 
         return prev
 
+    async def _is_host_or_current_singer(self, requester_id: str) -> bool:
+        """The base rule both playback and volume relax from."""
+        settings = await self.store.get_settings()
+        if requester_id == settings.host_id:
+            return True
+
+        current = await self.store.get_current()
+        return current is not None and current.singer.id == requester_id
+
     async def can_control_playback(self, requester_id: str) -> bool:
-        """Check if a singer can control playback.
+        """Check if a singer can control playback, seeking and pitch.
 
         The host and the current singer can always control. Everyone else is
         denied unless the host has opened playback to everyone.
@@ -173,24 +182,18 @@ class SessionManager:
         settings = await self.store.get_settings()
         if settings.anyone_can_control_playback:
             return True
-        if requester_id == settings.host_id:
-            return True
-
-        current = await self.store.get_current()
-        if current is not None and current.singer.id == requester_id:
-            return True
-
-        return False
+        return await self._is_host_or_current_singer(requester_id)
 
     async def can_control_volume(self, requester_id: str) -> bool:
         """Check if a singer can change the volume.
 
-        Same rule as playback, unless the host has opened volume to everyone.
+        Independent of the playback toggle: opening playback does not open
+        volume, so each toggle only governs what its label says.
         """
         settings = await self.store.get_settings()
         if settings.anyone_can_control_volume:
             return True
-        return await self.can_control_playback(requester_id)
+        return await self._is_host_or_current_singer(requester_id)
 
     async def update_setting(self, requester_id: str, key: str, value: object) -> bool:
         """Update a session setting.
