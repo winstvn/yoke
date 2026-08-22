@@ -9,8 +9,8 @@
 		resolveControlUrl().then((url) => {
 			controlUrl = url;
 			const qr = new QRCodeStyling({
-				width: 200,
-				height: 200,
+				width: 300,
+				height: 300,
 				type: 'svg',
 				data: url,
 				dotsOptions: {

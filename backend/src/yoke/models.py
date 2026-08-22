@@ -40,6 +40,8 @@ class PlaybackState(BaseModel):
 class SessionSettings(BaseModel):
     host_id: str | None = None
     anyone_can_reorder: bool = False
+    anyone_can_control_playback: bool = False
+    anyone_can_control_volume: bool = False
     volume: float = Field(default=1.0, ge=0.0, le=1.0)
 
 

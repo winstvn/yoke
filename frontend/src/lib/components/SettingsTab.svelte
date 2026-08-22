@@ -3,12 +3,17 @@
 	import { settings, getSocket } from '$lib/stores/session';
 	import { get } from 'svelte/store';
 
-	let { isHost = false, canControlPlayback = false }: {
+	let { isHost = false, canControlVolume = false }: {
 		isHost?: boolean;
-		canControlPlayback?: boolean;
+		canControlVolume?: boolean;
 	} = $props();
 
 	const PENDING_TIMEOUT_MS = 2000;
+
+	type AdminToggle =
+		| 'anyone_can_reorder'
+		| 'anyone_can_control_playback'
+		| 'anyone_can_control_volume';
 
 	let settingsValue = $state(get(settings));
 	let localVolume = $state(get(settings).volume);
@@ -81,19 +86,15 @@
 		sendVolume(value);
 	}
 
+	function toggleAdmin(key: AdminToggle) {
+		if (!isHost) return;
+		getSocket().send({ type: 'update_setting', key, value: !settingsValue[key] });
+	}
+
 	onDestroy(() => {
 		if (sendTimer) clearTimeout(sendTimer);
 		if (pendingTimer) clearTimeout(pendingTimer);
 	});
-
-	function toggleReorder() {
-		if (!isHost) return;
-		getSocket().send({
-			type: 'update_setting',
-			key: 'anyone_can_reorder',
-			value: !settingsValue.anyone_can_reorder
-		});
-	}
 </script>
 
 <div class="settings-tab">
@@ -103,7 +104,7 @@
 		<h3 class="group-heading">Audio</h3>
 		<div class="setting-card setting-card-static">
 			<div class="volume-row">
-				<span class="setting-label">Volume</span>
+				<span class="setting-label">Music Volume</span>
 				<span class="volume-value">{Math.round(localVolume * 100)}%</span>
 			</div>
 			<input
@@ -113,34 +114,40 @@
 				max="100"
 				step="1"
 				value={Math.round(localVolume * 100)}
-				disabled={!canControlPlayback}
+				disabled={!canControlVolume}
 				oninput={handleVolumeInput}
 				onchange={handleVolumeCommit}
-				aria-label="Volume"
+				aria-label="Music Volume"
 			/>
-			{#if !canControlPlayback}
-				<p class="setting-hint">Only the current singer can change the volume.</p>
-			{/if}
 		</div>
 	</section>
 
-	<section class="setting-group">
-		<h3 class="group-heading">Queue</h3>
-		<button
-			class="setting-card"
-			class:setting-card-disabled={!isHost}
-			disabled={!isHost}
-			onclick={toggleReorder}
-		>
-			<span class="setting-label">Allow everyone to reorder the queue</span>
-			<span class="toggle" class:active={settingsValue.anyone_can_reorder}>
-				<span class="toggle-knob"></span>
-			</span>
-		</button>
-		{#if !isHost}
-			<p class="setting-hint">Only the host can change this.</p>
-		{/if}
-	</section>
+	{#if isHost}
+		<section class="setting-group">
+			<h3 class="group-heading">Admin</h3>
+
+			<button class="setting-card" onclick={() => toggleAdmin('anyone_can_reorder')}>
+				<span class="setting-label">Allow everyone to reorder the queue</span>
+				<span class="toggle" class:active={settingsValue.anyone_can_reorder}>
+					<span class="toggle-knob"></span>
+				</span>
+			</button>
+
+			<button class="setting-card" onclick={() => toggleAdmin('anyone_can_control_playback')}>
+				<span class="setting-label">Allow everyone to control playback and pitch</span>
+				<span class="toggle" class:active={settingsValue.anyone_can_control_playback}>
+					<span class="toggle-knob"></span>
+				</span>
+			</button>
+
+			<button class="setting-card" onclick={() => toggleAdmin('anyone_can_control_volume')}>
+				<span class="setting-label">Allow everyone to control the volume</span>
+				<span class="toggle" class:active={settingsValue.anyone_can_control_volume}>
+					<span class="toggle-knob"></span>
+				</span>
+			</button>
+		</section>
+	{/if}
 </div>
 
 <style>
@@ -188,13 +195,8 @@
 		font-family: var(--font-mono);
 	}
 
-	.setting-card:hover:not(:disabled) {
+	.setting-card:hover {
 		background: var(--bg-surface-hover);
-	}
-
-	.setting-card-disabled {
-		cursor: not-allowed;
-		opacity: 0.5;
 	}
 
 	.setting-card-static {
@@ -203,6 +205,10 @@
 		align-items: stretch;
 		gap: 0.6rem;
 		cursor: default;
+	}
+
+	.setting-card-static:hover {
+		background: var(--bg-surface);
 	}
 
 	.setting-label {
@@ -232,14 +238,6 @@
 	.volume-slider:disabled {
 		cursor: not-allowed;
 		opacity: 0.45;
-	}
-
-	.setting-hint {
-		margin: 0;
-		font-size: 0.75rem;
-		color: var(--text-dim);
-		font-family: var(--font-mono);
-		line-height: 1.4;
 	}
 
 	.toggle {

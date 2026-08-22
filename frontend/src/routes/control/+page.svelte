@@ -45,8 +45,14 @@
 		};
 	});
 
+	// Mirrors can_control_playback / can_control_volume in session.py.
 	let isHost = $derived(singerId !== '' && settingsValue.host_id === singerId);
-	let canControlPlayback = $derived(isHost || (current !== null && current.singer.id === singerId));
+	let canControlPlayback = $derived(
+		settingsValue.anyone_can_control_playback ||
+			isHost ||
+			(current !== null && current.singer.id === singerId)
+	);
+	let canControlVolume = $derived(settingsValue.anyone_can_control_volume || canControlPlayback);
 
 	function handleJoin(name: string) {
 		singerName = name;
@@ -99,7 +105,7 @@
 {#if !joined}
 	<NameEntry onJoin={handleJoin} />
 {:else}
-	<TopBar {singerName} {activeTab} {connectionState} onTabChange={handleTabChange} />
+	<TopBar {singerName} {activeTab} {isHost} {connectionState} onTabChange={handleTabChange} />
 
 	<main class="content">
 		{#if activeTab === 'Search'}
@@ -107,7 +113,7 @@
 		{:else if activeTab === 'Queue'}
 			<QueueTab {singerId} {isHost} />
 		{:else if activeTab === 'Settings'}
-			<SettingsTab {isHost} {canControlPlayback} />
+			<SettingsTab {isHost} {canControlVolume} />
 		{/if}
 	</main>
 

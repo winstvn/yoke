@@ -31,6 +31,8 @@ export interface PlaybackState {
 export interface SessionSettings {
 	host_id: string | null;
 	anyone_can_reorder: boolean;
+	anyone_can_control_playback: boolean;
+	anyone_can_control_volume: boolean;
 	volume: number;
 }
 

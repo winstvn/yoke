@@ -25,8 +25,8 @@
 	$effect(() => {
 		if (!controlUrl || !qrContainer) return;
 		const qr = new QRCodeStyling({
-			width: 160,
-			height: 160,
+			width: 240,
+			height: 240,
 			type: 'svg',
 			data: controlUrl,
 			dotsOptions: {

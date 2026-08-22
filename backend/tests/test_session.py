@@ -462,6 +462,56 @@ async def test_update_volume_out_of_range_rejected(session: SessionManager):
     assert settings.volume == 1.0
 
 
+async def test_anyone_can_control_playback_opens_playback(session: SessionManager):
+    host = (await session.join("Alice")).singer
+    other = (await session.join("Charlie")).singer
+
+    assert await session.can_control_playback(other.id) is False
+
+    await session.update_setting(host.id, "anyone_can_control_playback", True)
+    assert await session.can_control_playback(other.id) is True
+
+
+async def test_anyone_can_control_playback_also_opens_volume(session: SessionManager):
+    """Volume falls back to the playback rule, so opening playback opens it too."""
+    host = (await session.join("Alice")).singer
+    other = (await session.join("Charlie")).singer
+
+    await session.update_setting(host.id, "anyone_can_control_playback", True)
+    assert await session.can_control_volume(other.id) is True
+
+
+async def test_anyone_can_control_volume_opens_volume_only(session: SessionManager):
+    host = (await session.join("Alice")).singer
+    other = (await session.join("Charlie")).singer
+
+    await session.update_setting(host.id, "anyone_can_control_volume", True)
+
+    assert await session.can_control_volume(other.id) is True
+    # Playback stays restricted.
+    assert await session.can_control_playback(other.id) is False
+
+    assert await session.update_setting(other.id, "volume", 0.2) is True
+    settings = await session.store.get_settings()
+    assert settings.volume == 0.2
+
+
+async def test_new_toggles_are_host_only(session: SessionManager):
+    await session.join("Alice")
+    other = (await session.join("Charlie")).singer
+
+    assert (
+        await session.update_setting(other.id, "anyone_can_control_playback", True)
+    ) is False
+    assert (
+        await session.update_setting(other.id, "anyone_can_control_volume", True)
+    ) is False
+
+    settings = await session.store.get_settings()
+    assert settings.anyone_can_control_playback is False
+    assert settings.anyone_can_control_volume is False
+
+
 async def test_update_setting_rejects_unlisted_keys(session: SessionManager):
     """A client must not be able to reassign the host or invent attributes."""
     host = (await session.join("Alice")).singer
