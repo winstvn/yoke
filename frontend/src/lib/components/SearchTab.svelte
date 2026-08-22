@@ -1,10 +1,18 @@
 <script lang="ts">
-	import { searchResults, searchQuery, queue, currentItem, getSocket } from '$lib/stores/session';
+	import {
+		searchResults,
+		searchQuery,
+		appendKaraoke,
+		queue,
+		currentItem,
+		getSocket
+	} from '$lib/stores/session';
 	import { get } from 'svelte/store';
 	import type { Song, QueueItem } from '$lib/types';
 	import StatusBadge from './StatusBadge.svelte';
 
 	let query = $state(get(searchQuery));
+	let karaoke = $state(get(appendKaraoke));
 	let searching = $state(false);
 	let results = $state<Song[]>(get(searchResults));
 	let queueItems = $state<QueueItem[]>(get(queue));
@@ -49,12 +57,24 @@
 		searchQuery.set(query);
 	});
 
+	$effect(() => {
+		appendKaraoke.set(karaoke);
+	});
+
+	// Appended at send time rather than typed into the input, so the box keeps
+	// showing what the singer actually wrote.
+	function buildQuery(raw: string): string {
+		const trimmed = raw.trim();
+		if (!karaoke || /\bkaraoke\b/i.test(trimmed)) return trimmed;
+		return `${trimmed} karaoke`;
+	}
+
 	function handleSearch(e: Event) {
 		e.preventDefault();
 		const trimmed = query.trim();
 		if (!trimmed) return;
 		searching = true;
-		getSocket().send({ type: 'search', query: trimmed });
+		getSocket().send({ type: 'search', query: buildQuery(trimmed) });
 	}
 
 	function queueSong(videoId: string) {
@@ -68,15 +88,21 @@
 
 <div class="search-tab">
 	<form class="search-form" onsubmit={handleSearch}>
-		<input
-			type="text"
-			class="search-input"
-			placeholder="Search for a song..."
-			bind:value={query}
-		/>
-		<button type="submit" class="search-btn" disabled={searching || !query.trim()}>
-			{searching ? 'Searching...' : 'Search'}
-		</button>
+		<div class="search-row">
+			<input
+				type="text"
+				class="search-input"
+				placeholder="Search for a song..."
+				bind:value={query}
+			/>
+			<button type="submit" class="search-btn" disabled={searching || !query.trim()}>
+				{searching ? 'Searching...' : 'Search'}
+			</button>
+		</div>
+		<label class="karaoke-toggle">
+			<input type="checkbox" bind:checked={karaoke} />
+			<span>Add "karaoke" to search query</span>
+		</label>
 	</form>
 
 	<div class="results">
@@ -122,7 +148,37 @@
 
 	.search-form {
 		display: flex;
+		flex-direction: column;
 		gap: 0.5rem;
+	}
+
+	.search-row {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.karaoke-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.15rem 0.1rem;
+		color: var(--text-secondary);
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.karaoke-toggle input {
+		width: 1rem;
+		height: 1rem;
+		accent-color: var(--amber);
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+
+	.karaoke-toggle:hover {
+		color: var(--text-primary);
 	}
 
 	.search-input {
