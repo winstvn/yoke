@@ -5,22 +5,17 @@
 	let {
 		singerName,
 		activeTab,
-		isHost,
 		onTabChange,
 		connectionState = 'disconnected'
 	}: {
 		singerName: string;
 		activeTab: string;
-		isHost: boolean;
 		onTabChange: (tab: string) => void;
 		connectionState?: ConnectionState;
 	} = $props();
 
-	const tabs = $derived(
-		isHost
-			? ['Search', 'Queue', 'Settings']
-			: ['Search', 'Queue']
-	);
+	// Everyone gets Settings; the controls inside gate themselves.
+	const tabs = ['Search', 'Queue', 'Settings'];
 
 	function handleQr() {
 		getSocket().send({ type: 'show_qr' });

@@ -99,7 +99,7 @@
 {#if !joined}
 	<NameEntry onJoin={handleJoin} />
 {:else}
-	<TopBar {singerName} {activeTab} {isHost} {connectionState} onTabChange={handleTabChange} />
+	<TopBar {singerName} {activeTab} {connectionState} onTabChange={handleTabChange} />
 
 	<main class="content">
 		{#if activeTab === 'Search'}
@@ -107,7 +107,7 @@
 		{:else if activeTab === 'Queue'}
 			<QueueTab {singerId} {isHost} />
 		{:else if activeTab === 'Settings'}
-			<SettingsTab />
+			<SettingsTab {isHost} {canControlPlayback} />
 		{/if}
 	</main>
 

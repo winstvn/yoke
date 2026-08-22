@@ -19,6 +19,9 @@ class Song(BaseModel):
     duration_seconds: int
     cached: bool = False
     detected_key: str | None = None
+    # None means "not measured yet" -- playback then applies no normalization.
+    loudness_lufs: float | None = None
+    true_peak_db: float | None = None
 
 
 class QueueItem(BaseModel):
@@ -37,6 +40,7 @@ class PlaybackState(BaseModel):
 class SessionSettings(BaseModel):
     host_id: str | None = None
     anyone_can_reorder: bool = False
+    volume: float = Field(default=1.0, ge=0.0, le=1.0)
 
 
 class SessionState(BaseModel):

@@ -2,8 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from yoke.models import PlaybackState, QueueItem, Singer, Song
+from pydantic import ValidationError
+
+from yoke.models import PlaybackState, QueueItem, SessionSettings, Singer, Song
 from yoke.redis_store import RedisStore
+
+# Only the current singer or the host may change these.
+_PLAYBACK_CONTROL_SETTINGS = frozenset({"volume"})
+# Only the host may change these.
+_HOST_ONLY_SETTINGS = frozenset({"anyone_can_reorder"})
 
 
 @dataclass
@@ -173,14 +180,31 @@ class SessionManager:
         return False
 
     async def update_setting(self, requester_id: str, key: str, value: object) -> bool:
-        """Update a session setting. Only the host can change settings.
+        """Update a session setting.
 
-        Returns True if changed, False if denied.
+        Volume follows the playback-control rule (current singer or host);
+        everything else is host-only. Returns False if denied or invalid.
         """
         settings = await self.store.get_settings()
-        if requester_id != settings.host_id:
+
+        if key in _PLAYBACK_CONTROL_SETTINGS:
+            allowed = await self.can_control_playback(requester_id)
+        elif key in _HOST_ONLY_SETTINGS:
+            allowed = requester_id == settings.host_id
+        else:
+            # Unlisted keys are rejected so a client cannot set host_id or
+            # invent attributes on the settings model.
             return False
 
-        setattr(settings, key, value)
-        await self.store.save_settings(settings)
+        if not allowed:
+            return False
+
+        data = settings.model_dump()
+        data[key] = value
+        try:
+            updated = SessionSettings.model_validate(data)
+        except ValidationError:
+            return False
+
+        await self.store.save_settings(updated)
         return True

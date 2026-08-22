@@ -11,6 +11,8 @@ export interface Song {
 	duration_seconds: number;
 	cached: boolean;
 	detected_key: string | null;
+	loudness_lufs: number | null;
+	true_peak_db: number | null;
 }
 
 export interface QueueItem {
@@ -29,6 +31,7 @@ export interface PlaybackState {
 export interface SessionSettings {
 	host_id: string | null;
 	anyone_can_reorder: boolean;
+	volume: number;
 }
 
 export interface SessionState {
