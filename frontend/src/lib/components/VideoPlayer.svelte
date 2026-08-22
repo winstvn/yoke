@@ -53,13 +53,18 @@
 			lastVideoId = item.song.video_id;
 			videoEl.src = `/videos/${item.song.video_id}`;
 			videoEl.load();
-			videoEl.play().then(async () => {
-				if (!pitchShifter.isConnected) {
-					await pitchShifter.connect(videoEl);
-				}
-				await pitchShifter.resume();
-				pitchShifter.setPitch(playbackState.pitch_shift);
-			});
+			videoEl
+				.play()
+				.then(async () => {
+					if (!pitchShifter.isConnected) {
+						await pitchShifter.connect(videoEl);
+					}
+					await pitchShifter.resume();
+					pitchShifter.setPitch(playbackState.pitch_shift);
+				})
+				// A missing/undecodable source rejects here as well as firing the
+				// element's `error` event; onError drives the recovery.
+				.catch((err) => console.error('Playback failed to start:', err));
 		} else if (!item) {
 			lastVideoId = null;
 			videoEl.removeAttribute('src');
@@ -107,12 +112,21 @@
 		// an automatic event, not a user control — signal it as its own message.
 		getSocket().send({ type: 'song_ended', item_id: current?.id });
 	}
+
+	function onError() {
+		// A video that fails to load (e.g. the file was never downloaded, so
+		// /videos/{id} 404s) never fires `ended`, which would leave the display
+		// black forever. Treat it as the end of the song so the queue advances.
+		console.error('Video failed to load:', current?.song.video_id, videoEl?.error);
+		getSocket().send({ type: 'song_ended', item_id: current?.id });
+	}
 </script>
 
 <video
 	bind:this={videoEl}
 	class="video-player"
 	onended={onEnded}
+	onerror={onError}
 	playsinline
 	crossorigin="anonymous"
 ></video>
