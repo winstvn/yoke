@@ -22,6 +22,8 @@ export const settings = writable<SessionSettings>({
 	anyone_can_reorder: false
 });
 export const searchQuery = writable('');
+// Survives the SearchTab being torn down on tab switches, like searchQuery.
+export const appendKaraoke = writable(true);
 export const searchResults = writable<Song[]>([]);
 export const notifications = writable<Array<{ id: string; text: string }>>([]);
 export const screenMessages = writable<Array<{ id: string; name: string; text: string }>>([]);
